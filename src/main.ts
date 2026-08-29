@@ -347,25 +347,25 @@ function applyOverlayToDom(o: OverlayState): void {
   progressEl.style.width = `${o.progress * 100}%`;
 }
 
+const logoImage = new Image();
+logoImage.src = '/reshapex-logo.svg';
+
 /** Canvas twin of the DOM HUD, used for video export. */
 function drawOverlay(ctx: CanvasRenderingContext2D, w: number, h: number, o: OverlayState): void {
   const k = w / 1600;
   const steel = 'rgba(139,154,173,';
   ctx.save();
   ctx.textBaseline = 'middle';
-  // Mark
-  ctx.fillStyle = '#73B400';
-  ctx.shadowColor = 'rgba(115,180,0,0.55)';
-  ctx.shadowBlur = 12 * k;
-  ctx.beginPath();
-  ctx.arc(44 * k, 40 * k, 4 * k, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.shadowBlur = 0;
+  // Logo
+  if (logoImage.complete && logoImage.naturalWidth > 0) {
+    const lh = 22 * k;
+    const lw = lh * (logoImage.naturalWidth / logoImage.naturalHeight);
+    ctx.globalAlpha = 0.92;
+    ctx.drawImage(logoImage, 40 * k, 32 * k, lw, lh);
+    ctx.globalAlpha = 1;
+  }
   ctx.font = `600 ${12 * k}px "Hanken Grotesk", system-ui, sans-serif`;
   ctx.letterSpacing = `${0.12 * 12 * k}px`;
-  ctx.fillStyle = `${steel}1)`;
-  ctx.textAlign = 'left';
-  ctx.fillText('RESHAPEX × NOVANTA · QUICK CONSULT', 60 * k, 40 * k);
   ctx.textAlign = 'right';
   ctx.fillStyle = `${steel}0.55)`;
   ctx.fillText(o.beat.toUpperCase(), w - 40 * k, 40 * k);

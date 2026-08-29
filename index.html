@@ -28,11 +28,7 @@
       }
       .hud.visible { opacity: 1; }
       .hud .row { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
-      .hud .mark { display: flex; align-items: center; gap: 12px; }
-      .hud .mark::before {
-        content: ''; width: 8px; height: 8px; border-radius: 999px;
-        background: var(--electric-green); box-shadow: 0 0 12px 2px rgba(115,180,0,0.55);
-      }
+      .hud .logo { height: 22px; width: auto; display: block; opacity: 0.92; }
       .hud .beat { color: rgba(139,154,173,0.55); min-width: 160px; text-align: right; }
       .hud .status { color: #ffe500; margin-right: 16px; }
       .hud .status:empty { display: none; }
@@ -80,7 +76,7 @@
     <canvas id="scene"></canvas>
     <div class="hud" id="hud">
       <div class="row">
-        <div class="mark">ReshapeX × Novanta · Quick Consult</div>
+        <img class="logo" src="/reshapex-logo.svg" alt="ReshapeX" />
         <div class="beat"><span id="status" class="status"></span><span id="beat">Dormant field</span></div>
       </div>
       <div class="row">
