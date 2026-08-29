@@ -74,8 +74,8 @@ Three ways to close a query:
 | Action | Speed | Points | Trust risk |
 | --- | --- | --- | --- |
 | **Answer** | Instant | Full, extends streak | Wrong chain is a *hallucination*: the largest trust loss in the game |
-| **Cross-validate** | ~1s hold | 60% | None — tells you if the chain is wrong before committing |
-| **Escalate** | Occupies the queue until it resolves | Zero | None |
+| **Cross-validate** | ~1s hold | 60% | None — reports whether the chain as a whole is valid, but not which slot is at fault |
+| **Escalate** | Holds a queue slot for a fixed resolution delay (start at 6s) | Zero | None |
 
 The tension the game is built around is the moment the player is 90% sure with 1.2 seconds on the
 clock.
@@ -90,10 +90,11 @@ three in flight while a fourth times out.
 
 Starting values, all to be replaced by simulation output (see Testing):
 
-- Trust: start 100; hallucination -25; timeout -8; escalation 0; validated answer +2
+- Trust: start 100; hallucination -25; timeout -8; escalation 0; any correct answer +2 (whether or
+  not it was cross-validated)
 - Score: base 100 per query, x speed multiplier (up to 2.0), x streak multiplier; cross-validated
   answers score 60%; escalations score 0
-- Streak resets on any hallucination, not on escalation
+- Streak resets on a hallucination or a timeout; escalation leaves it intact
 
 ## Run structure
 
@@ -102,21 +103,23 @@ one upgrade from three offered.
 
 ### Difficulty axes
 
-Five axes ramp independently so progression never feels like one slider:
+Six axes ramp independently so progression never feels like one slider:
 
-1. Concurrency: 1 query in flight (waves 1-2), 2 (waves 3-5), 3 (waves 6+)
-2. Clock: 12s at wave 1, roughly -7% per wave, floor 4s
-3. Slots per query: 3 (waves 1-4), 4 (waves 5-8), 5 (waves 9+)
-4. Constraints that eliminate options: cleanroom, high temp, ESD
-5. Near-miss decoys: a module rated 12.4 kg when the query needs 12.5
+1. Wave size: 4 queries at wave 1, +1 per wave
+2. Concurrency: 1 query in flight (waves 1-2), 2 (waves 3-5), 3 (waves 6+)
+3. Clock: 12s at wave 1, roughly -7% per wave, floor 4s
+4. Slots per query: 3 (waves 1-4), 4 (waves 5-8), 5 (waves 9+)
+5. Constraints that eliminate options: cleanroom, high temp, ESD
+6. Near-miss decoys: a module rated 12.4 kg when the query needs 12.5
 
 Wave 1 is deliberately soft: one query, generous clock, bands labelled. It is the tutorial and it
 is not announced as one.
 
 ### Upgrades
 
-Three offered from a pool of about ten at each wave break, clustered into three archetypes so runs
-diverge:
+Three offered at each wave break from a pool clustered into three archetypes, so runs diverge. The
+upgrades named below are the initial pool of eight; the target is roughly ten to twelve once
+simulation shows which archetypes are underfed:
 
 - **Throughput** — cached answers auto-fill a repeated slot; one arm stays permanently labelled;
   +1 queue slot
