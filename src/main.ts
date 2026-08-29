@@ -164,13 +164,14 @@ streakOut.layers.set(TRAIL_LAYER);
 scene.add(trails.overlay);
 camera.layers.enable(OVERLAY_LAYER);
 camera.layers.enable(TRAIL_LAYER);
-function placeStreak(mesh: Mesh, at: Vector3, alpha: number, color: typeof PALETTE.white): void {
+/** widthMul lets a flash grow outward on impact rather than sitting at a fixed size. */
+function placeStreak(mesh: Mesh, at: Vector3, alpha: number, color: typeof PALETTE.white, widthMul = 1): void {
   mesh.visible = alpha > 0.01;
   if (!mesh.visible) return;
   const d = camera.position.distanceTo(at);
   mesh.position.copy(at);
   mesh.quaternion.copy(camera.quaternion);
-  mesh.scale.set(d * 0.3, d * 0.02, 1);
+  mesh.scale.set(d * 0.3 * widthMul, d * 0.02 * (0.5 + widthMul * 0.5), 1);
   const mat = mesh.material as ShaderMaterial;
   mat.uniforms.uAlpha!.value = alpha;
   (mat.uniforms.uColor!.value as typeof PALETTE.white).copy(color);
@@ -814,15 +815,11 @@ function step(dt: number, outW = window.innerWidth, outH = window.innerHeight): 
     }
   }
 
-  // --- scheduled inbound particle
+  // --- scheduled inbound particle: a clean traveling signal, no flat streak in transit.
   const inboundAge = t - (LAND - 2.0);
   if (inboundAge >= 0 && inboundAge < 2.0) {
     const u = easeArrive(inboundAge / 2.0);
     signals.emit((uu, out) => bezier(inboundStart, inboundC1, inboundC2, hubPos, uu, out), u, 1.8, 0.18);
-    bezier(inboundStart, inboundC1, inboundC2, hubPos, u, tmpV);
-    placeStreak(streakIn, tmpV, 0.55 * Math.sin((inboundAge / 2.0) * Math.PI) + 0.25, PALETTE.cyberBlue);
-  } else {
-    streakIn.visible = false;
   }
   // One answer out: many streams converged, one decision leaves.
   const answerAge = t - ANSWER;
@@ -840,6 +837,16 @@ function step(dt: number, outW = window.innerWidth, outH = window.innerHeight): 
   if (landAge >= 0 && landAge < 0.9) {
     ringProgress = landAge / 0.9;
     ring.position.copy(hubPos);
+  }
+  // Impact flash: the flat streak now only exists as the burst on landing, expanding
+  // outward from the hit point and fading, in lockstep with the ring.
+  if (landAge >= -0.04 && landAge < 0.55) {
+    const flashU = Math.max(0, landAge) / 0.55;
+    const widthMul = 0.15 + flashU * 1.3;
+    const alpha = (1 - flashU) * (1 - flashU) * 1.1;
+    placeStreak(streakIn, hubPos, alpha, PALETTE.cyberBlue, widthMul);
+  } else {
+    streakIn.visible = false;
   }
   ring.visible = ringProgress >= 0;
   if (ring.visible) {
