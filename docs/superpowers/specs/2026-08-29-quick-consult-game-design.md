@@ -137,9 +137,14 @@ sim could evaluate the dial. Defined here, and to be tuned by simulation:
   the number the tuning conversation is about.
 - Streak resets on a hallucination or a timeout. Escalation leaves it intact.
 
-**Trust is spendable.** The player may deliberately burn 10 trust to commit instantly at full speed
-multiplier ("ship it"). Risk becomes a resource to allocate rather than only a punishment to absorb,
-and it gives the aggressive and cautious builds a place to meet.
+**Trust is spendable.** The player may deliberately burn **5 trust** to commit instantly at the full
+speed multiplier ("ship it"). Risk becomes a resource to allocate rather than only a punishment to
+absorb, and it gives the aggressive and cautious builds a place to meet.
+
+The 5 is load-bearing and was checked against the exchange rate rather than guessed: at 12 points per
+trust, burning 10 would cost 120 points to gain at most 80, so no rational player would ever press
+it. At 5 it costs 60 to gain up to 80 — positive only when the player is already near the top of the
+speed multiplier, which is exactly when the decision is interesting.
 
 ## Standing configuration
 
@@ -151,10 +156,14 @@ So the player owns a small **standing configuration** that carries across the ru
 
 - **Cache.** Answering a query adds its chain to a cache with limited slots. Cached chains auto-fill
   on a matching query, which is the throughput reward for consistency. But **a cached wrong chain
-  keeps being wrong** — a hallucination that gets cached will fire again until the player notices and
-  evicts it. Mistakes now compound visibly.
-- **Capacity allocation.** A small pool of attention distributed across categories. Over-allocating
-  to grippers makes gripper queries faster and everything else slower.
+  keeps being wrong**: a hallucinated chain still enters the cache and keeps auto-filling matching
+  queries until the player spends an action to evict it. The trust hit is immediate, so the player
+  knows — the compounding cost is that fixing it competes for the same attention as answering.
+  Mistakes now have a tail.
+- **Capacity allocation.** A small pool of attention distributed across categories, where each point
+  allocated to a category adds a clock bonus to queries touching it and removes one from every other
+  category. Over-allocating to grippers makes gripper queries comfortable and everything else tight.
+  Exact magnitudes come from simulation.
 
 Both are visible on the board, both are the player's own doing, and both create the "my minute-3
 decision is hurting me now" texture the design was missing.
@@ -164,7 +173,10 @@ decision is hurting me now" texture the design was missing.
 ### The inbox
 
 Queries do not simply arrive. They land in an inbox showing difficulty and reward, and the player
-**pulls** the one they want. This is the cheapest source of genuine decisions in the whole design and
+**pulls** the one they want. Inbox size and concurrency are different things and are tuned
+separately: the **inbox** is how many queries are visible to choose between, while **concurrency** is
+how many the player may have in flight at once. A bigger inbox buys choice; higher concurrency
+demands hands. This is the cheapest source of genuine decisions in the whole design and
 v1 lacked it entirely: take the lucrative ambiguous one, or clear three easy ones while the clock is
 kind?
 
