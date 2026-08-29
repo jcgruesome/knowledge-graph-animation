@@ -1,4 +1,4 @@
-# ReshapeX × Novanta · Quick Consult graph animation
+# ReshapeX graph animation
 
 "Signal becomes intelligence." A cinematic, loopable (20 s) 3D graph-activation piece built
 on the Novanta Quick Consult case study (reshapex.com/en/case-studies/quick-consult-novanta).
