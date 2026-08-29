@@ -12,6 +12,7 @@ const fragment = /* glsl */ `
   uniform float uActs[3];
   uniform float uTime;
   uniform float uGain;
+  uniform vec3 uBase;
 
   float hash(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
   float vnoise(vec3 p) {
@@ -41,16 +42,16 @@ const fragment = /* glsl */ `
       vec3 p = camPos + dirW * d;
       float n = fbm(p * 0.035 + vec3(uTime * 0.02, 0.0, uTime * 0.012));
       float dens = 0.0016 * (0.35 + n);
-      vec3 tint = vec3(0.22, 0.5, 1.0) * 0.22;
+      vec3 tint = uBase * 0.16;
       for (int c = 0; c < 3; c++) {
         vec3 dc = p - uCenters[c];
         float g = exp(-dot(dc, dc) / (2.0 * 17.0 * 17.0)) * uActs[c];
         dens += 0.008 * g * (0.5 + n);
-        tint += uTints[c] * g * 1.1;
+        tint += uTints[c] * g * (c == 0 ? 0.35 : 0.8);
       }
       vec3 dr = p - uRoot;
       float light = uRootI / (1.0 + dot(dr, dr) * 0.0035);
-      vec3 scatter = tint * (light + 0.06);
+      vec3 scatter = tint * (light * 0.6 + 0.05);
       acc += trans * dens * stepLen * scatter;
       trans *= exp(-dens * stepLen);
     }
@@ -77,7 +78,8 @@ export class VolumetricHazeEffect extends Effect {
         ['uTints', new Uniform([new Vector3(), new Vector3(), new Vector3()])],
         ['uActs', new Uniform([0, 0, 0])],
         ['uTime', new Uniform(0)],
-        ['uGain', new Uniform(0.8)],
+        ['uGain', new Uniform(0.42)],
+        ['uBase', new Uniform(new Vector3(0.0, 0.36, 0.565))], // Enterprise Blue #005C90
       ]),
     });
   }

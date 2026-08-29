@@ -14,6 +14,9 @@
         --steel: #8b9aad;
         --cyber-blue: #00d9ff;
         --electric-green: #73b400;
+        --enterprise-violet: #340090;
+        --hot-magenta: #ff006e;
+        --volt-yellow: #ffe500;
       }
       html, body { margin: 0; height: 100%; background: var(--deep-space); overflow: hidden; }
       canvas { display: block; width: 100vw; height: 100vh; }
@@ -30,7 +33,7 @@
       .hud .row { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
       .hud .logo { height: 22px; width: auto; display: block; opacity: 0.92; }
       .hud .beat { color: rgba(139,154,173,0.55); min-width: 160px; text-align: right; }
-      .hud .status { color: #ffe500; margin-right: 16px; }
+      .hud .status { color: var(--volt-yellow); margin-right: 16px; }
       .hud .status:empty { display: none; }
       .hud .voice {
         font-family: 'Newsreader', Georgia, serif; font-style: italic; font-weight: 400;
@@ -79,14 +82,14 @@
       }
       .log.visible { opacity: 1; }
       .log .line { white-space: nowrap; }
-      .log .line.answer { color: #ffe500; }
+      .log .line.answer { color: var(--volt-yellow); }
       .progress {
         position: fixed; left: 0; right: 0; bottom: 0; height: 2px;
         background: rgba(139,154,173,0.10);
       }
       .progress > i {
         position: absolute; left: 0; top: 0; bottom: 0; width: 0;
-        background: linear-gradient(90deg, var(--electric-green), var(--cyber-blue), #7a4dff, #ff006e);
+        background: linear-gradient(90deg, var(--electric-green), var(--cyber-blue), color-mix(in srgb, var(--enterprise-violet) 58%, white), var(--hot-magenta));
         opacity: 0.6;
       }
     </style>

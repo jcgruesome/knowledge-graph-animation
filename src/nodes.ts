@@ -108,11 +108,11 @@ const fragment = /* glsl */ `
     // Awake: white-hot core, colored halo, soft outer field.
     vec3 halo = vHalo;
     bool isRoot = vKind > 1.5 && vKind < 2.5;
-    float coreK = isRoot ? 0.7 : 0.85;
+    float coreK = isRoot ? 0.7 : (vKind > 0.5 ? 0.8 : 0.55);
     float core = exp(-d * d * 34.0) * (coreK + 0.9 * max(act - 1.0, 0.0));
     float ring = exp(-d * d * 6.0) * 1.0;
     float field = exp(-d * 3.0) * 0.38;
-    vec3 coreCol = isRoot ? mix(vec3(1.0), uGreen, 0.55) : (vKind > 2.5 ? mix(vec3(1.0), vHalo, 0.35) : vec3(1.0));
+    vec3 coreCol = isRoot ? mix(vec3(1.0), uGreen, 0.55) : mix(vec3(1.0), vHalo, vKind > 2.5 ? 0.4 : 0.28);
     vec3 awake = coreCol * core + halo * (ring + field) * (1.1 + 0.5 * max(act - 1.0, 0.0));
 
     vec3 col = dormant * (1.0 - a1 * 0.7) + awake * a1;

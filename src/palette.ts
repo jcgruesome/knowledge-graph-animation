@@ -15,8 +15,8 @@ export const PALETTE = {
   white: new Color('#FFFFFF'),
 } as const;
 
-/** Lifted violet so it survives additive blending on Deep Space. */
-export const VIOLET_HALO = PALETTE.enterpriseViolet.clone().lerp(PALETTE.hotMagenta, 0.22).lerp(PALETTE.white, 0.28);
+/** Enterprise Violet lifted toward white (no hue change) so it survives additive blending. */
+export const VIOLET_HALO = PALETTE.enterpriseViolet.clone().lerp(PALETTE.white, 0.3);
 
 /**
  * Halo color per node. Green = root, magenta = stakes (bridge endpoints: uncertain, routed to a human),

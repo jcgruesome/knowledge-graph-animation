@@ -2,7 +2,7 @@ import { AdditiveBlending, BufferAttribute, BufferGeometry, Points, ShaderMateri
 import { PALETTE } from './palette';
 import type { Color } from 'three';
 
-export const DEFAULT_TINT = PALETTE.white.clone().lerp(PALETTE.cyberBlue, 0.6);
+export const DEFAULT_TINT = PALETTE.cyberBlue.clone().lerp(PALETTE.white, 0.35);
 
 const TRAIL = 36;
 

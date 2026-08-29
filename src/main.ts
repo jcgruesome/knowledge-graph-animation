@@ -33,7 +33,7 @@ import { EdgeField } from './edges';
 import { SignalField } from './signals';
 import { ClusterFields, createBackdrop, createDust } from './atmosphere';
 import { CameraRig } from './cameraRig';
-import { haloColor, PALETTE } from './palette';
+import { haloColor, PALETTE, VIOLET_HALO } from './palette';
 import { LoopExporter } from './export';
 import { DEFAULT_TINT } from './signals';
 import { unfurl } from './motion';
@@ -123,7 +123,7 @@ function heartbeatAt(t: number): { age: number; strength: number } {
 }
 
 // Light source for god rays: a small emissive sphere at the root, scaled with its activation.
-const sun = new Mesh(new SphereGeometry(0.45, 24, 16), new MeshBasicMaterial({ color: 0xdff6ff, depthWrite: false, transparent: true, opacity: 0.9 }));
+const sun = new Mesh(new SphereGeometry(0.45, 24, 16), new MeshBasicMaterial({ color: PALETTE.cyberBlue.clone().lerp(PALETTE.white, 0.45), depthWrite: false, transparent: true, opacity: 0.9 }));
 sun.position.set(graph.positions[graph.coreHub * 3]!, graph.positions[graph.coreHub * 3 + 1]!, graph.positions[graph.coreHub * 3 + 2]!);
 sun.scale.setScalar(0.001);
 scene.add(sun);
@@ -214,7 +214,8 @@ const bloom = new BloomEffect({
 const vignette = new VignetteEffect({ offset: 0.22, darkness: 0.62 });
 const noise = new NoiseEffect({ blendFunction: BlendFunction.SOFT_LIGHT, premultiply: true });
 noise.blendMode.opacity.value = 0.18;
-const tone = new ToneMappingEffect({ mode: ToneMappingMode.ACES_FILMIC });
+// Neutral (Khronos PBR) keeps hues where the brand put them; ACES pushed Cyber Blue toward teal.
+const tone = new ToneMappingEffect({ mode: ToneMappingMode.NEUTRAL });
 const godRays = new GodRaysEffect(camera, sun, {
   density: 0.96,
   decay: 0.94,
@@ -229,7 +230,7 @@ const haze = new VolumetricHazeEffect();
 haze.setStatic(
   new Vector3(graph.positions[graph.coreHub * 3]!, graph.positions[graph.coreHub * 3 + 1]!, graph.positions[graph.coreHub * 3 + 2]!),
   graph.clusters.map((c) => new Vector3(...c.center)),
-  [PALETTE.electricGreen, PALETTE.cyberBlue, PALETTE.enterpriseViolet.clone().lerp(PALETTE.hotMagenta, 0.3)].map((c) => new Vector3(c.r, c.g, c.b)),
+  [PALETTE.electricGreen, PALETTE.cyberBlue, VIOLET_HALO].map((c) => new Vector3(c.r, c.g, c.b)),
 );
 composer.addPass(new EffectPass(camera, haze, godRays, bloom, tone, vignette, noise));
 composer.addPass(new EffectPass(camera, new SMAAEffect()));
@@ -301,7 +302,7 @@ function focusTargetDistance(t: number): number {
 const edgeTint = graph.edges.map((e) => {
   if (e.hero) return DEFAULT_TINT;
   const field = (id: number) => haloColor(graph, { ...graph.nodes[id]!, kind: 0 });
-  return field(e.a).clone().lerp(field(e.b), 0.5).lerp(PALETTE.white, 0.45);
+  return field(e.a).clone().lerp(field(e.b), 0.5).lerp(PALETTE.white, 0.22);
 });
 
 // ---------------------------------------------------------------- interaction: routed queries
@@ -668,7 +669,7 @@ function drawOverlay(ctx: CanvasRenderingContext2D, w: number, h: number, o: Ove
     if (o.card.verified > 0) {
       ctx.globalAlpha = o.card.verified;
       ctx.font = `600 ${10 * k}px "Hanken Grotesk", system-ui, sans-serif`;
-      ctx.fillStyle = '#73B400';
+      ctx.fillStyle = `#${PALETTE.electricGreen.getHexString()}`;
       ctx.fillText('✓  VALIDATED AGAINST CANONICAL REFERENCE · 1 OF 8.2M', x, y + 4 * k);
       ctx.globalAlpha = 1;
     }
@@ -685,10 +686,10 @@ function drawOverlay(ctx: CanvasRenderingContext2D, w: number, h: number, o: Ove
   ctx.fillStyle = `${steel}0.10)`;
   ctx.fillRect(0, h - 2 * k, w, 2 * k);
   const grad = ctx.createLinearGradient(0, 0, w, 0);
-  grad.addColorStop(0, '#73B400');
-  grad.addColorStop(0.4, '#00D9FF');
-  grad.addColorStop(0.75, '#7a4dff');
-  grad.addColorStop(1, '#ff006e');
+  grad.addColorStop(0, `#${PALETTE.electricGreen.getHexString()}`);
+  grad.addColorStop(0.4, `#${PALETTE.cyberBlue.getHexString()}`);
+  grad.addColorStop(0.75, `#${VIOLET_HALO.getHexString()}`);
+  grad.addColorStop(1, `#${PALETTE.hotMagenta.getHexString()}`);
   ctx.globalAlpha = 0.6;
   ctx.fillStyle = grad;
   ctx.fillRect(0, h - 2 * k, w * o.progress, 2 * k);
