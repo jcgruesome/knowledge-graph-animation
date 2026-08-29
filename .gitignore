@@ -3,3 +3,5 @@ dist
 .playwright-mcp
 *.jpeg
 exports
+.vercel
+.vercel

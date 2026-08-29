@@ -1,0 +1,5 @@
+exports
+.playwright-mcp
+*.jpeg
+node_modules
+dist
