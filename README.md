@@ -1,12 +1,17 @@
 # ReshapeX graph animation
 
-"Signal becomes intelligence." A cinematic, loopable (20 s) 3D graph-activation piece built
-on the Novanta Quick Consult case study (reshapex.com/en/case-studies/quick-consult-novanta).
-A customer query (robot, payload, application) lands on the end-of-arm-tooling catalog root,
-grounding cascades through product families, the result is cross-validated against the
-compatibility matrices, the 8.2 million valid configurations are searched, uncertain matches
-route to an application engineer, and one validated part-number sequence leaves. The inbound
-query rotates through Quick Consult's seven live languages each loop.
+"Signal becomes intelligence." A cinematic, loopable (20 s) 3D graph-activation piece.
+
+A customer query (robot, payload, application) lands on the catalog root, grounding cascades
+through product families, the result is cross-validated against the compatibility matrices,
+the configuration space is searched, uncertain matches route to an application engineer, and
+one validated part-number sequence leaves. The inbound query rotates through seven languages
+each loop.
+
+**All catalog content is illustrative.** Product families, module ids and figures are synthetic
+stand-ins chosen to look plausible for industrial end-of-arm tooling. They do not represent any
+customer, and no real part numbers appear. A future iteration will drive the graph from real
+product data in Neo4j.
 
 ## Run
 

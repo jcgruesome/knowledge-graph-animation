@@ -371,12 +371,12 @@ const BEATS: Array<[number, string]> = [
   [4, 'Grounding'],
   [6.8, 'Tooling catalog resolves'],
   [9.6, 'Cross-validation'],
-  [11.2, '8.2M configurations'],
+  [11.2, 'Configuration space'],
   [13.4, 'Streams converge'],
   [ANSWER, 'Validated part number'],
   [18, 'Recede'],
 ];
-// Module lines on the answer card. Generic module ids, deliberately not real Novanta SKUs.
+// Module lines on the answer card. Illustrative module ids, not real part numbers.
 const ANSWER_MODULES: Array<Array<[string, string]>> = [
   [['Tool changer', 'TC · 046'], ['Gripper', 'GR · 112'], ['Robot-side adapter', 'RA · 207']],
   [['Tool changer', 'TC · 031'], ['Compliance device', 'CD · 088'], ['Utility coupler', 'UC · 014']],
@@ -395,7 +395,7 @@ function decodeText(value: string, decode: number, seed: number): string {
 }
 const VOICE = [
   'Signal becomes intelligence.',
-  '8.2 million valid configurations. One validated answer.',
+  'Millions of valid configurations. One validated answer.',
   'Decades of pattern recognition, available to every customer.',
   'Uncertain? It asks an engineer. It never guesses.',
 ];
@@ -671,7 +671,7 @@ function drawOverlay(ctx: CanvasRenderingContext2D, w: number, h: number, o: Ove
       ctx.globalAlpha = o.card.verified;
       ctx.font = `600 ${10 * k}px "Hanken Grotesk", system-ui, sans-serif`;
       ctx.fillStyle = `#${PALETTE.electricGreen.getHexString()}`;
-      ctx.fillText('✓  VALIDATED AGAINST CANONICAL REFERENCE · 1 OF 8.2M', x, y + 4 * k);
+      ctx.fillText('✓  VALIDATED AGAINST CANONICAL REFERENCE', x, y + 4 * k);
       ctx.globalAlpha = 1;
     }
   }

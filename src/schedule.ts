@@ -164,8 +164,8 @@ export function buildSchedule(graph: Graph, seed: number): Schedule {
     signals.push({ edge: tailBridge, t0: start, dur, dir: edgeFrom[tailBridge] === 0 ? 1 : -1, strength: 1.5 });
     nodeStart[tail.hub] = start + dur;
     events.push({ t: start, text: `${fmt(start)}  bridge → configuration space` });
-    events.push({ t: start + dur + 0.2, text: `${fmt(start + dur + 0.2)}  searching 8.2M valid configurations` });
-    labels.push({ node: tail.hub, t: start + dur, text: `Configurations · 8.2M valid` });
+    events.push({ t: start + dur + 0.2, text: `${fmt(start + dur + 0.2)}  searching the configuration space` });
+    labels.push({ node: tail.hub, t: start + dur, text: `Configurations · ${leavesOf(tail.hub).length} indexed` });
     for (const leaf of leavesOf(tail.hub)) {
       const rank = graph.nodes[leaf]!.rank;
       const arrive = start + dur + 0.15 + rank * 2.7;
