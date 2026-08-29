@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Ccircle cx=%278%27 cy=%278%27 r=%275%27 fill=%27%2373B400%27/%3E%3C/svg%3E" />
+    <title>Quick Consult · Signal becomes intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@500;600&family=Newsreader:ital,opsz,wght@1,6..72,400&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --deep-space: #0d1117;
+        --steel: #8b9aad;
+        --cyber-blue: #00d9ff;
+        --electric-green: #73b400;
+      }
+      html, body { margin: 0; height: 100%; background: var(--deep-space); overflow: hidden; }
+      canvas { display: block; width: 100vw; height: 100vh; }
+      .hud {
+        position: fixed; inset: 0; pointer-events: none;
+        display: flex; flex-direction: column; justify-content: space-between;
+        padding: 32px 40px; box-sizing: border-box;
+        color: var(--steel);
+        font-family: 'Hanken Grotesk', system-ui, sans-serif;
+        font-weight: 600; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+        opacity: 0; transition: opacity 1.6s ease;
+      }
+      .hud.visible { opacity: 1; }
+      .hud .row { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
+      .hud .mark { display: flex; align-items: center; gap: 12px; }
+      .hud .mark::before {
+        content: ''; width: 8px; height: 8px; border-radius: 999px;
+        background: var(--electric-green); box-shadow: 0 0 12px 2px rgba(115,180,0,0.55);
+      }
+      .hud .beat { color: rgba(139,154,173,0.55); min-width: 160px; text-align: right; }
+      .hud .status { color: #ffe500; margin-right: 16px; }
+      .hud .status:empty { display: none; }
+      .hud .voice {
+        font-family: 'Newsreader', Georgia, serif; font-style: italic; font-weight: 400;
+        font-size: 22px; letter-spacing: 0; text-transform: none; color: #e5e9ec;
+        opacity: 0; transition: opacity 1.4s ease; max-width: 36ch; text-wrap: balance;
+      }
+      .hud .voice.visible { opacity: 0.85; }
+      .hud .hint { color: rgba(139,154,173,0.45); }
+      .labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+      .label {
+        position: absolute; left: 0; top: 0; transform: translate(0, 0);
+        font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 600; font-size: 10px;
+        letter-spacing: 0.12em; text-transform: uppercase; color: rgba(229,233,236,0.78);
+        white-space: nowrap; opacity: 0; will-change: transform, opacity;
+        padding-left: 14px;
+      }
+      .label::before {
+        content: ''; position: absolute; left: 0; top: 50%; width: 10px; height: 1px;
+        background: rgba(139,154,173,0.6);
+      }
+      .label small { color: rgba(139,154,173,0.85); margin-left: 6px; font-weight: 500; }
+      .log {
+        position: fixed; right: 40px; bottom: 96px; text-align: right; pointer-events: none;
+        font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 500; font-size: 11px;
+        letter-spacing: 0.04em; color: rgba(139,154,173,0.85); line-height: 1.7;
+        font-variant-numeric: tabular-nums; opacity: 0; transition: opacity 1.6s ease;
+      }
+      .log.visible { opacity: 1; }
+      .log .line { white-space: nowrap; }
+      .log .line.answer { color: #ffe500; }
+      .progress {
+        position: fixed; left: 0; right: 0; bottom: 0; height: 2px;
+        background: rgba(139,154,173,0.10);
+      }
+      .progress > i {
+        position: absolute; left: 0; top: 0; bottom: 0; width: 0;
+        background: linear-gradient(90deg, var(--electric-green), var(--cyber-blue), #7a4dff, #ff006e);
+        opacity: 0.6;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+    <div class="hud" id="hud">
+      <div class="row">
+        <div class="mark">ReshapeX × Novanta · Quick Consult</div>
+        <div class="beat"><span id="status" class="status"></span><span id="beat">Dormant field</span></div>
+      </div>
+      <div class="row">
+        <div class="voice" id="voice">Signal becomes intelligence.</div>
+        <div class="hint">Drag or arrows to orbit · Shift to pan · Scroll to zoom · Click a node to route a query · C returns the camera · Space pauses · E exports one loop</div>
+      </div>
+    </div>
+    <div class="labels" id="labels"></div>
+    <div class="log" id="log"></div>
+    <div class="progress"><i id="progress"></i></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
