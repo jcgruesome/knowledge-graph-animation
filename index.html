@@ -39,6 +39,25 @@
       }
       .hud .voice.visible { opacity: 0.85; }
       .hud .hint { color: rgba(139,154,173,0.45); }
+      .hud .bottom-left { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; flex: 0 0 auto; }
+      .hud .hint { max-width: 60ch; text-align: right; }
+      .query {
+        font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 500; font-size: 13px;
+        letter-spacing: 0.04em; text-transform: none; color: rgba(229,233,236,0.85); opacity: 0;
+        min-height: 1.2em; white-space: nowrap;
+      }
+      .query.typing::after { content: '▍'; color: var(--cyber-blue); animation: blink 0.9s steps(1) infinite; }
+      @keyframes blink { 50% { opacity: 0; } }
+      .card {
+        display: none; flex-direction: column; gap: 4px; text-transform: none; letter-spacing: 0;
+        font-family: 'Hanken Grotesk', system-ui, sans-serif;
+      }
+      .card.visible { display: flex; }
+      .card .row { display: grid; grid-template-columns: 150px auto; gap: 8px; align-items: baseline; opacity: 0; transition: opacity 0.3s ease; }
+      .card .k { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(139,154,173,0.85); }
+      .card .v { font-size: 13px; font-weight: 500; letter-spacing: 0.04em; color: rgba(139,154,173,0.7); font-variant-numeric: tabular-nums; }
+      .card .v.settled { color: rgba(229,233,236,0.95); }
+      .card .verified { margin-top: 6px; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--electric-green); opacity: 0; }
       .labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
       .label {
         position: absolute; left: 0; top: 0; transform: translate(0, 0);
@@ -53,7 +72,7 @@
       }
       .label small { color: rgba(139,154,173,0.85); margin-left: 6px; font-weight: 500; }
       .log {
-        position: fixed; right: 40px; bottom: 96px; text-align: right; pointer-events: none;
+        position: fixed; right: 40px; bottom: 132px; text-align: right; pointer-events: none;
         font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 500; font-size: 11px;
         letter-spacing: 0.04em; color: rgba(139,154,173,0.85); line-height: 1.7;
         font-variant-numeric: tabular-nums; opacity: 0; transition: opacity 1.6s ease;
@@ -80,8 +99,12 @@
         <div class="beat"><span id="status" class="status"></span><span id="beat">Dormant field</span></div>
       </div>
       <div class="row">
-        <div class="voice" id="voice">Signal becomes intelligence.</div>
-        <div class="hint">Drag or arrows to orbit · Shift to pan · Scroll to zoom · Click a node to route a query · C returns the camera · Space pauses · E exports one loop</div>
+        <div class="bottom-left">
+          <div class="card" id="card"><div class="verified" id="card-verified">✓ Validated against canonical reference · 1 of 8.2M</div></div>
+          <div class="query" id="query"></div>
+          <div class="voice" id="voice">Signal becomes intelligence.</div>
+        </div>
+        <div class="hint"><span id="sound-hint">Click anywhere for sound</span> · Drag or arrows to orbit · Shift to pan · Scroll to zoom · Click a node to route a query · C returns the camera · Space pauses · E exports one loop</div>
       </div>
     </div>
     <div class="labels" id="labels"></div>

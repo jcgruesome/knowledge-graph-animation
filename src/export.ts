@@ -14,6 +14,8 @@ export interface ExporterHooks {
   /** reset the loop clock to 0 and clear transient interactions */
   begin: () => void;
   onStatus: (text: string) => void;
+  /** optional audio to mux into the recording */
+  audioStream?: () => MediaStream | null;
 }
 
 /**
@@ -34,7 +36,7 @@ export class LoopExporter {
   start(): void {
     if (this.active) return;
     if (typeof MediaRecorder === 'undefined') throw new Error('MediaRecorder is not available in this browser');
-    const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((m) => MediaRecorder.isTypeSupported(m));
+    const mime = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8,opus', 'video/webm'].find((m) => MediaRecorder.isTypeSupported(m));
     if (!mime) throw new Error('No supported WebM encoder');
 
     this.active = true;
@@ -54,6 +56,8 @@ export class LoopExporter {
     if (!ctx) throw new Error('2D context unavailable for export compositing');
 
     const stream = compose.captureStream(FPS);
+    const audio = this.hooks.audioStream?.();
+    if (audio) for (const track of audio.getAudioTracks()) stream.addTrack(track);
     const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 28_000_000 });
     const chunks: Blob[] = [];
     recorder.ondataavailable = (ev) => {

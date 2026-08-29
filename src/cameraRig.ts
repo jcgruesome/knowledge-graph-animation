@@ -1,5 +1,5 @@
 import { CatmullRomCurve3, PerspectiveCamera, Vector3 } from 'three';
-import { LOOP } from './schedule';
+import { ANSWER, LOOP } from './schedule';
 
 /**
  * One slow dolly push toward the root over the loop, with a barely perceptible lateral drift,
@@ -131,12 +131,22 @@ export class CameraRig {
     this.pos.copy(this.autoPos).lerp(manualPos, b);
     this.tgt.copy(this.autoTgt).lerp(this.manualTgt, b);
 
+    // Dolly-zoom on the answer: FOV opens while the camera pushes in, so the root holds
+    // its size and the whole field seems to expand behind it.
+    const zAge = loopTime - ANSWER;
+    let fov = 36;
+    if (zAge >= 0 && zAge < 1.6 && !this.reducedMotion) {
+      const pulse = Math.pow(Math.sin((zAge / 1.6) * Math.PI), 2);
+      fov = 36 + 16 * pulse;
+      const ratio = Math.tan((36 * Math.PI) / 360) / Math.tan((fov * Math.PI) / 360);
+      this.pos.sub(this.tgt).multiplyScalar(ratio).add(this.tgt);
+    }
     this.camera.position.copy(this.pos);
     this.camera.lookAt(this.tgt);
     this.right.set(1, 0, 0).applyQuaternion(this.camera.quaternion);
     this.up.set(0, 1, 0).applyQuaternion(this.camera.quaternion);
-    if (this.camera.fov !== 36) {
-      this.camera.fov = 36;
+    if (this.camera.fov !== fov) {
+      this.camera.fov = fov;
       this.camera.updateProjectionMatrix();
     }
     this.focusDistance = this.pos.distanceTo(this.tgt);

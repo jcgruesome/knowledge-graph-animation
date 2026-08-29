@@ -9,6 +9,7 @@ import {
 } from 'three';
 import type { Graph } from './graph';
 import { haloColor, PALETTE } from './palette';
+import { UNFURL_GLSL } from './motion';
 
 const vertex = /* glsl */ `
   attribute vec3 aOffset;
@@ -17,8 +18,14 @@ const vertex = /* glsl */ `
   attribute float aSeed;
   attribute float aAct;
   attribute vec3 aHalo;
+  attribute float aStart;
+  attribute vec3 aAnchor;
+  attribute float aDist;
 
   uniform float uTime;
+  uniform float uLoopT;
+  uniform float uHeartAge;
+  uniform float uHeartStrength;
   uniform float uFocus;
   uniform float uFocusRange;
 
@@ -30,15 +37,18 @@ const vertex = /* glsl */ `
   varying float vDepthFade;
   varying vec3 vHalo;
 
+  ${UNFURL_GLSL}
+
   void main() {
     vUv = uv;
     vHalo = aHalo;
-    vAct = aAct;
+    float beat = heartbeat(aDist, uHeartAge, uHeartStrength) * step(0.05, aAct);
+    vAct = aAct + beat * 0.9;
     vKind = aKind;
     vSeed = aSeed;
 
     // Dormant nodes float almost imperceptibly; awake nodes are still.
-    vec3 p = aOffset;
+    vec3 p = unfurlPos(aOffset, aAnchor, aStart, uLoopT);
     float drift = (1.0 - min(aAct, 1.0)) * 0.12;
     p.x += sin(uTime * 0.21 + aSeed * 12.0) * drift;
     p.y += sin(uTime * 0.17 + aSeed * 31.0) * drift;
@@ -53,8 +63,8 @@ const vertex = /* glsl */ `
     vDepthFade = smoothstep(320.0, 50.0, depth);
 
     float flicker = aKind < 0.5 ? 0.05 * sin(uTime * 6.0 + aSeed * 80.0) * sin(uTime * 2.3 + aSeed * 17.0) : 0.0;
-    float breathe = 1.0 + (0.07 * sin(uTime * 1.3 + aSeed * 6.2831) + flicker) * min(aAct, 1.0);
-    float awake = 1.0 + 1.9 * min(aAct, 1.6);
+    float breathe = 1.0 + (0.07 * sin(uTime * 1.3 + aSeed * 6.2831) + flicker) * min(vAct, 1.0);
+    float awake = 1.0 + 1.9 * min(vAct, 1.6);
     bool isRoot = aKind > 1.5 && aKind < 2.5;
     float haloKind = isRoot ? 1.9 : (aKind > 0.5 ? 1.2 : 1.0);
     float size = aSize * (0.26 + 0.2 * awake) * breathe * haloKind * (1.0 + coc * 2.2);
@@ -114,6 +124,7 @@ const fragment = /* glsl */ `
 export class NodeField {
   readonly mesh: Mesh;
   private readonly act: InstancedBufferAttribute;
+  private readonly start: InstancedBufferAttribute;
   private readonly material: ShaderMaterial;
 
   constructor(graph: Graph) {
@@ -143,6 +154,23 @@ export class NodeField {
     geo.setAttribute('aKind', new InstancedBufferAttribute(kind, 1));
     geo.setAttribute('aSeed', new InstancedBufferAttribute(seed, 1));
     geo.setAttribute('aHalo', new InstancedBufferAttribute(halo, 3));
+    const start = new Float32Array(n);
+    const anchor = new Float32Array(n * 3);
+    const dist = new Float32Array(n);
+    graph.nodes.forEach((nd, i) => {
+      start[i] = -Infinity; // set later via setUnfurl
+      const parent = graph.parent[i]!;
+      const a = parent >= 0 && nd.kind !== 1 && nd.kind !== 2 ? parent : i;
+      anchor[i * 3] = graph.positions[a * 3]!;
+      anchor[i * 3 + 1] = graph.positions[a * 3 + 1]!;
+      anchor[i * 3 + 2] = graph.positions[a * 3 + 2]!;
+      const root = graph.clusters[nd.cluster]!.center;
+      dist[i] = Math.hypot(graph.positions[i * 3]! - root[0], graph.positions[i * 3 + 1]! - root[1], graph.positions[i * 3 + 2]! - root[2]);
+    });
+    this.start = new InstancedBufferAttribute(start, 1);
+    geo.setAttribute('aStart', this.start);
+    geo.setAttribute('aAnchor', new InstancedBufferAttribute(anchor, 3));
+    geo.setAttribute('aDist', new InstancedBufferAttribute(dist, 1));
     this.act = new InstancedBufferAttribute(new Float32Array(n), 1);
     this.act.setUsage(35048); // DynamicDrawUsage
     geo.setAttribute('aAct', this.act);
@@ -153,6 +181,9 @@ export class NodeField {
       fragmentShader: fragment,
       uniforms: {
         uTime: { value: 0 },
+        uLoopT: { value: 0 },
+        uHeartAge: { value: -1 },
+        uHeartStrength: { value: 0 },
         uFocus: { value: 40 },
         uFocusRange: { value: 26 },
         uSteel: { value: PALETTE.steel },
@@ -172,10 +203,20 @@ export class NodeField {
     return this.act.array as Float32Array;
   }
 
-  commit(time: number, focus: number): void {
+  /** Per-node unfurl start times (loop seconds). -Infinity = fixed, Infinity = stays a bud. */
+  setUnfurl(starts: Float32Array): void {
+    (this.start.array as Float32Array).set(starts);
+    this.start.needsUpdate = true;
+  }
+
+  commit(time: number, loopT: number, focus: number, heartAge: number, heartStrength: number): void {
     this.act.needsUpdate = true;
-    this.material.uniforms.uTime!.value = time;
-    this.material.uniforms.uFocus!.value = focus;
+    const u = this.material.uniforms;
+    u.uTime!.value = time;
+    u.uLoopT!.value = loopT;
+    u.uFocus!.value = focus;
+    u.uHeartAge!.value = heartAge;
+    u.uHeartStrength!.value = heartStrength;
   }
 
   positionOf(graph: Graph, id: number, out: Vector3): Vector3 {

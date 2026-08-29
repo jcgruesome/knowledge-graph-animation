@@ -21,6 +21,10 @@ pnpm build      # typecheck + production bundle in dist/
 - **Click** a node: route a new query to it (inbound signal, impact, one-hop ripple)
 - **Drag** or **arrow keys**: orbit · **Shift + drag/arrows** (or right-drag): pan · **Scroll**: zoom
 - Any camera input takes over from the cinematic path; after 6 idle seconds it eases back. **C** returns it immediately
+- **Hover** a hub to light its flower
+- **Click anywhere** once to unlock sound (synthesized in Web Audio, quantized to the choreography). **M** mutes
+- **E** records exactly one loop (20 s, 1920×1080, 60 fps, WebM with audio). Recording starts on the second loop so the previous loop's embers are present at the seam. Convert for LinkedIn with
+  `ffmpeg -i quick-consult-loop.webm -c:v libx264 -pix_fmt yuv420p -crf 18 -c:a aac quick-consult-loop.mp4`
 - **Space**: pause · **R**: restart loop · **H**: toggle HUD
 - Console: `kg.seek(seconds)`, `kg.pause(bool)` for frame capture
 
@@ -35,7 +39,10 @@ pnpm build      # typecheck + production bundle in dist/
 | `src/signals.ts` | Data signals as short trails driven by a 0..1 path parameter. |
 | `src/atmosphere.ts` | Deep-space backdrop with haze, cluster atmospheric fields, dust. |
 | `src/cameraRig.ts` | Camera on closed splines (push, glide, recede), pointer parallax, drag look. |
-| `src/main.ts` | Scene, post (bloom, ACES, vignette, grain, SMAA), interaction, HUD, projected region labels, run log. |
+| `src/motion.ts` | Unfurl math shared by CPU and GLSL: leaves rest as a bud inside their hub and spring out (ease-out-back) as the hub wakes; the graph folds back during the recede. Heartbeat wave function. |
+| `src/audio.ts` | Sound design: room tone, whoosh-to-chime landing, pentatonic plucks per spoke, granular ticks per flower, convergence pad, one bell for the answer. |
+| `src/export.ts` | MediaRecorder loop export with HUD composited onto the frame and audio muxed. |
+| `src/main.ts` | Scene, post (god rays from the root, bloom, ACES, vignette, grain, SMAA), rack focus, anamorphic streaks, dolly-zoom on the answer, interaction, HUD, region labels, run log, typed query, decoding answer card. |
 
 ## Palette (ReshapeX design system, marketing mode)
 
