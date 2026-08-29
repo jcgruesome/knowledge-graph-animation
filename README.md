@@ -16,6 +16,13 @@ pnpm dev        # http://localhost:5173
 pnpm build      # typecheck + production bundle in dist/
 ```
 
+## Density
+
+`?density=1` (default, ~2k nodes, most legible) · `?density=2` (~8k) · `?density=3` (~20k nodes, ~37k
+ribbon segments). The schedule (activation, draw state, unfurl) is evaluated in the vertex shaders
+from per-node/per-edge start times, so the CPU does no per-node work per frame at any density; only
+interactions and traveling pulses are uploaded, through a small per-edge data texture.
+
 ## Controls
 
 - **Click** a node: route a new query to it (inbound signal, impact, one-hop ripple)
@@ -35,7 +42,7 @@ pnpm build      # typecheck + production bundle in dist/
 | `src/graph.ts` | Seeded hierarchical graph modeled on real ReshapeX knowledge graphs: a catalog root with a radial fan of 58 category hubs, each carrying a phyllotaxis "flower" of SKU leaves with fine sibling webbing; a violet documents system joined by bridges; a 430-node long-tail sunflower disc. Hub positions settle via constrained repulsion on a shell; positions cached in `localStorage`. |
 | `src/schedule.ts` | Deterministic choreography: query lands on the root, six hero spokes draw and their flowers bloom inner-ring-out, a radial sweep wakes the rest, bridges carry the signal to documents and the long tail (spiral index), return traffic converges, one answer leaves. Also emits the run-log events and region labels. Everything is a pure function of loop time, so the loop is exact. |
 | `src/nodes.ts` | Instanced billboard nodes with custom shader: dormant steel points, white-hot core + cyan/green halo, fake depth of field. |
-| `src/edges.ts` | Hairline filament shader: draw-progress head, persistent glow, traveling pulse. |
+| `src/edges.ts` | Glass-strand ribbons: each segment is a screen-space quad with a soft core and faint rim (GL lines can't be wider than 1 px). Curved root→hub spokes. GPU-evaluated draw state; CPU pulses/boosts via data texture. |
 | `src/signals.ts` | Data signals as short trails driven by a 0..1 path parameter. |
 | `src/atmosphere.ts` | Deep-space backdrop with haze, cluster atmospheric fields, dust. |
 | `src/cameraRig.ts` | Camera on closed splines (push, glide, recede), pointer parallax, drag look. |

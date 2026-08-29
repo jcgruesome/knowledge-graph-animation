@@ -26,7 +26,7 @@ import {
   VignetteEffect,
   BlendFunction,
 } from 'postprocessing';
-import { buildGraph } from './graph';
+import { buildGraph, type Density } from './graph';
 import { ANSWER, buildSchedule, LAND, LOOP, edgeState, envelope, ignition, nodeActivation } from './schedule';
 import { NodeField } from './nodes';
 import { EdgeField } from './edges';
@@ -55,17 +55,11 @@ const rig = new CameraRig(window.innerWidth / window.innerHeight);
 rig.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const camera = rig.camera;
 
-const graph = buildGraph(SEED);
+// ?density=1|2|3 → ~2k / ~8k / ~20k nodes. The GPU evaluates the choreography, so this scales.
+const densityParam = Number(new URLSearchParams(location.search).get('density') ?? '1');
+const density: Density = densityParam === 2 ? 2 : densityParam === 3 ? 3 : 1;
+const graph = buildGraph(SEED, density);
 const schedule = buildSchedule(graph, SEED);
-
-const sound = new SoundDesign(graph, schedule);
-const nodes = new NodeField(graph);
-const edges = new EdgeField(graph, schedule.edgeFrom);
-const signals = new SignalField(96);
-const fields = new ClusterFields(graph);
-const backdrop = createBackdrop();
-const dust = createDust(SEED, 420);
-scene.add(backdrop, dust, fields.points, edges.lines, nodes.mesh, signals.points);
 
 // Flowers unfurl: leaves start as a bud inside their hub and spring out as the hub wakes.
 // Hubs and roots are fixed (-Infinity); leaves of hubs that never wake stay buds (Infinity).
@@ -85,8 +79,17 @@ for (const nd of graph.nodes) {
   const disc = graph.clusters[nd.cluster]!.shape === 'disc';
   unfurlStart[nd.id] = disc && Number.isFinite(own) ? own - 0.35 : hubStart + 0.06 + nd.rank * 0.5;
 }
+
+const sound = new SoundDesign(graph, schedule);
+const nodes = new NodeField(graph, schedule.nodeStart);
 nodes.setUnfurl(unfurlStart);
-edges.setUnfurl(graph, schedule.edgeFrom, unfurlStart);
+const edges = new EdgeField(graph, schedule.edgeFrom, schedule.edgeStart, schedule.edgeDur, unfurlStart, [1, 0.6, 0.38][density - 1]!);
+rig.pathScale = [1, 1.25, 1.5][density - 1]!;
+const signals = new SignalField(96);
+const fields = new ClusterFields(graph);
+const backdrop = createBackdrop();
+const dust = createDust(SEED, 420);
+scene.add(backdrop, dust, fields.points, edges.mesh, nodes.mesh, signals.points);
 
 /** World position of a node at loop time t, accounting for unfurl. */
 const anchorTmp = new Vector3();
@@ -680,12 +683,31 @@ const timer = new Timer();
 let elapsed = 0;
 let paused = false;
 let lastLoop = -1;
-const nodeAct = nodes.activation;
+const nodeAct = nodes.boost;
+// Awake fraction per cluster, from sorted ignition times (no per-node CPU work per frame).
+const clusterStarts = graph.clusters.map((c) =>
+  Float64Array.from(graph.nodes.filter((nd) => nd.cluster === c.id).map((nd) => schedule.nodeStart[nd.id]!).filter(Number.isFinite)).sort(),
+);
+function awakeFraction(cluster: number, t: number): number {
+  const arr = clusterStarts[cluster]!;
+  const total = clusterCount[cluster]!;
+  const countLE = (x: number): number => {
+    let lo = 0;
+    let hi = arr.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (arr[mid]! <= x) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  };
+  const cur = (countLE(t) / total) * envelope(t);
+  const res = (countLE(t + LOOP) / total) * envelope(t + LOOP);
+  return Math.max(cur, res);
+}
 const clusterSum = new Float32Array(graph.clusters.length);
 const clusterCount = new Float32Array(graph.clusters.length);
 for (const nd of graph.nodes) clusterCount[nd.cluster] = (clusterCount[nd.cluster] as number) + 1;
-const edgePulse = new Float32Array(graph.edges.length);
-const edgeBoost = new Float32Array(graph.edges.length);
 const tmpV = new Vector3();
 
 let lastOverlay: OverlayState | null = null;
@@ -705,21 +727,22 @@ function step(dt: number, outW = window.innerWidth, outH = window.innerHeight): 
   rig.update(t, elapsed, dt);
   if (!paused) sound.update(t);
 
-  // --- nodes
-  clusterSum.fill(0);
-  for (const nd of graph.nodes) {
-    let a = nodeActivation(schedule.nodeStart[nd.id] as number, t);
-    for (const inj of injections) {
-      const age = elapsed - inj.arrive;
-      if (age <= 0) continue;
-      if (inj.node === nd.id) {
-        a = Math.max(a, ignition(age) * Math.exp(-age * 0.45) * 1.25);
-      }
-    }
-    if (hoverHub >= 0 && (nd.id === hoverHub || graph.parent[nd.id] === hoverHub)) a = Math.max(a, Math.min(a + 0.45, 1.3));
-    nodeAct[nd.id] = a;
-    clusterSum[nd.cluster] = (clusterSum[nd.cluster] as number) + Math.min(a, 1);
+  // --- nodes: scheduled activation runs on the GPU; the CPU only writes sparse boosts.
+  nodeAct.fill(0);
+  for (const inj of injections) {
+    const age = elapsed - inj.arrive;
+    if (age > 0) nodeAct[inj.node] = Math.max(nodeAct[inj.node]!, ignition(age) * Math.exp(-age * 0.45) * 1.25);
   }
+  if (hoverHub >= 0) {
+    nodeAct[hoverHub] = Math.max(nodeAct[hoverHub]!, 1.2);
+    for (const eid of graph.incident[hoverHub]!) {
+      const e = graph.edges[eid]!;
+      const other = e.a === hoverHub ? e.b : e.a;
+      if (graph.parent[other] === hoverHub) nodeAct[other] = Math.max(nodeAct[other]!, 1.0);
+    }
+  }
+  for (const c of graph.clusters) clusterSum[c.id] = awakeFraction(c.id, t) * (clusterCount[c.id] as number);
+  const rootAct = Math.max(nodeActivation(schedule.nodeStart[graph.coreHub]!, t), nodeAct[graph.coreHub]!);
 
   // Ambient life: single-leaf verification pings while the network is settled.
   if (t > 12 && t < 17.4) {
@@ -733,8 +756,7 @@ function step(dt: number, outW = window.innerWidth, outH = window.innerHeight): 
   }
 
   // --- injections: flight, impact, and a one-hop ripple to neighbors
-  edgePulse.fill(-1);
-  edgeBoost.fill(0);
+  edges.begin();
   signals.begin();
   let ringProgress = -1;
   for (let i = injections.length - 1; i >= 0; i--) {
@@ -763,9 +785,9 @@ function step(dt: number, outW = window.innerWidth, outH = window.innerHeight): 
           // pulse position in the edge's own draw-direction parameter space
           const fromA = edges.orientation[eid] === 1;
           const startsAtA = e.a === inj.node;
-          edgePulse[eid] = fromA === startsAtA ? u : 1 - u;
+          edges.setPulse(eid, fromA === startsAtA ? u : 1 - u);
         }
-        edgeBoost[eid] = Math.max(edgeBoost[eid] as number, Math.exp(-age * 0.8));
+        edges.setBoost(eid, Math.exp(-age * 0.8));
         const nAge = age - hop;
         if (nAge > 0) {
           nodeAct[other] = Math.max(nodeAct[other] as number, ignition(nAge) * Math.exp(-nAge * 0.6) * 0.9);
@@ -818,16 +840,8 @@ function step(dt: number, outW = window.innerWidth, outH = window.innerHeight): 
       const env = envelope(t + shift);
       signals.emit(edgePath(sig.edge, sig.dir, t), u, sig.strength * env, 0.22, edgeTint[sig.edge]);
       const fromA = edges.orientation[sig.edge] === 1;
-      edgePulse[sig.edge] = (sig.dir === 1) === fromA ? u : 1 - u;
+      edges.setPulse(sig.edge, (sig.dir === 1) === fromA ? u : 1 - u);
     }
-  }
-
-  // --- edges
-  for (const e of graph.edges) {
-    const st = edgeState(schedule.edgeStart[e.id] as number, schedule.edgeDur[e.id] as number, t);
-    const boost = edgeBoost[e.id] as number;
-    const progress = boost > 0 ? 1 : st.progress;
-    edges.set(e.id, progress, Math.max(st.glow, boost * 1.3), edgePulse[e.id] as number);
   }
 
   // --- cluster atmosphere
@@ -839,9 +853,9 @@ function step(dt: number, outW = window.innerWidth, outH = window.innerHeight): 
   focusDistance += (focusTargetDistance(t) - focusDistance) * (1 - Math.exp(-dt * 2.2));
   const hb = heartbeatAt(t);
   nodes.commit(elapsed, t, focusDistance, hb.age, hb.strength);
-  edges.commit(t, hb.age, hb.strength);
+  edges.commit(t, hb.age, hb.strength, outW, outH, pr);
   signals.commit(pr, focusDistance);
-  sun.scale.setScalar(0.12 + 0.55 * Math.min(nodeAct[graph.coreHub]!, 1.6));
+  sun.scale.setScalar(0.12 + 0.55 * Math.min(rootAct, 1.6));
   fields.commit(pr);
   (dust.material as ShaderMaterial).uniforms.uTime!.value = elapsed;
   (dust.material as ShaderMaterial).uniforms.uPixelRatio!.value = pr;
@@ -1004,7 +1018,7 @@ window.addEventListener('resize', () => {
 // Debug / capture hooks: seek the loop clock and pause.
 declare global {
   interface Window {
-    kg: { seek: (t: number) => void; pause: (p: boolean) => void };
+    kg: { seek: (t: number) => void; pause: (p: boolean) => void; debug: { renderer: WebGLRenderer; edges: Mesh } };
   }
 }
 window.kg = {
@@ -1014,6 +1028,7 @@ window.kg = {
   pause: (p: boolean) => {
     paused = p;
   },
+  debug: { renderer, edges: edges.mesh },
 };
 
 requestAnimationFrame(() => hud.classList.add('visible'));

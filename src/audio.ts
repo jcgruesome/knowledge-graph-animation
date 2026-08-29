@@ -98,8 +98,10 @@ export class SoundDesign {
       cues.push({ t, fire: (ctx, at) => this.pluck(ctx, at, midi(note), hero ? 0.22 : 0.07) });
     });
     // Flowers: granular ticks, a sparse sample of leaves.
-    g.nodes
-      .filter((nd) => nd.kind === 0 && Number.isFinite(s.nodeStart[nd.id]!) && nd.id % 6 === 0)
+    const leaves = g.nodes.filter((nd) => nd.kind === 0 && Number.isFinite(s.nodeStart[nd.id]!));
+    const stride = Math.max(1, Math.round(leaves.length / 260));
+    leaves
+      .filter((_, i) => i % stride === 0)
       .forEach((nd) => {
         const t = s.nodeStart[nd.id]!;
         cues.push({ t, fire: (ctx, at) => this.tick(ctx, at, 1800 + nd.rank * 2600, 0.035) });

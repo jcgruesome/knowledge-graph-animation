@@ -39,6 +39,8 @@ export class CameraRig {
   focusDistance = 40;
   /** prefers-reduced-motion: hold the wide pose, no drift or parallax */
   reducedMotion = false;
+  /** world-scale multiplier for the path (denser graphs are physically larger) */
+  pathScale = 1;
 
   // Manual camera: orbit around a target. Blended over the cinematic path.
   private readonly manualTgt = new Vector3();
@@ -99,8 +101,8 @@ export class CameraRig {
 
   update(loopTime: number, wallTime: number, dt: number): void {
     const u = this.reducedMotion ? 0 : (loopTime / LOOP) % 1;
-    this.posCurve.getPointAt(u, this.autoPos);
-    this.tgtCurve.getPointAt(u, this.autoTgt);
+    this.posCurve.getPointAt(u, this.autoPos).multiplyScalar(this.pathScale);
+    this.tgtCurve.getPointAt(u, this.autoTgt).multiplyScalar(this.pathScale);
 
     if (!this.reducedMotion) {
       // Micro drift: a mounted camera on a very slow slider, not a hand.

@@ -49,7 +49,7 @@ export interface Graph {
   bridges: number[];
 }
 
-const LAYOUT_VERSION = 7;
+const LAYOUT_VERSION = 8;
 const GOLDEN = Math.PI * (3 - Math.sqrt(5));
 
 interface HubSpec {
@@ -116,8 +116,12 @@ function settleHubs(specs: HubSpec[], rng: Random): Array<[number, number, numbe
   return pos;
 }
 
-export function buildGraph(seed: number): Graph {
-  const rng = new Random(seed);
+/** 1 ≈ 2k nodes (legible), 2 ≈ 8k, 3 ≈ 20k. */
+export type Density = 1 | 2 | 3;
+
+export function buildGraph(seed: number, density: Density = 1): Graph {
+  const rng = new Random(seed ^ (density * 0x45d9f3b));
+  const D = { hubs: [58, 110, 180][density - 1]!, leafScale: [1, 1.7, 3.0][density - 1]!, docsHubs: [15, 28, 42][density - 1]!, tail: [430, 1400, 4000][density - 1]!, radius: [1, 1.25, 1.5][density - 1]! };
   const nodes: GraphNode[] = [];
   const positions: number[] = [];
   const edges: GraphEdge[] = [];
@@ -180,7 +184,7 @@ export function buildGraph(seed: number): Graph {
       ids.push(id);
     }
     // Fine webbing: each leaf to its two nearest siblings. Gives regions a woven texture.
-    if (leaves <= 80) {
+    if (leaves <= 200) {
       const seen = new Set<string>();
       for (const i of ids) {
         const near = ids
@@ -213,7 +217,7 @@ export function buildGraph(seed: number): Graph {
       specs.push({
         dir: fibonacciDir(i, hubCount, rng),
         radius: radius[0] + (radius[1] - radius[0]) * Math.pow(rng.next(), 1.4),
-        leaves: Math.floor(6 + 54 * Math.pow(rng.next(), 2.2)),
+        leaves: Math.floor((6 + 54 * Math.pow(rng.next(), 2.2)) * D.leafScale),
       });
     }
     const hubPos = settleHubs(specs, rng);
@@ -232,18 +236,18 @@ export function buildGraph(seed: number): Graph {
   };
 
   // --- Main catalog: the dandelion.
-  const main = addFan(0, 0, [0, 0, 0], 58, [13, 26], 2.3);
+  const main = addFan(0, 0, [0, 0, 0], D.hubs, [13 * D.radius, 26 * D.radius], 2.3);
 
   // --- Documents / specs system: violet, joined by bridges.
-  const docsOrigin: [number, number, number] = [-40, -16, -14];
-  const docs = addFan(1, 2, docsOrigin, 15, [7, 13], 1.7);
+  const docsOrigin: [number, number, number] = [-40 * D.radius, -16 * D.radius, -14];
+  const docs = addFan(1, 2, docsOrigin, D.docsHubs, [7 * D.radius, 13 * D.radius], 1.7);
 
   // --- Long tail: one hub at the rim of a large sunflower disc.
-  const tailRoot: [number, number, number] = [34, 12, -36];
+  const tailRoot: [number, number, number] = [34 * D.radius, 12 * D.radius, -36];
   const tailId = clusters.length;
   const tailHub = addNode(tailId, 2, 1.5, tailRoot);
   const tailDir: [number, number, number] = normalize([0.55, 0.25, -0.8]);
-  addFlower(tailId, tailHub, tailRoot, tailDir, 430, 2.5);
+  addFlower(tailId, tailHub, tailRoot, tailDir, D.tail, 2.5);
   clusters.push({ id: tailId, center: tailRoot, hub: tailHub, tint: 1, hubs: [], shape: 'disc' });
 
   // --- Bridges. Hero: root to root. Then a handful of hub-to-hub links whose main-side
@@ -274,7 +278,7 @@ export function buildGraph(seed: number): Graph {
   }
 
   const pos = new Float32Array(positions);
-  const settled = loadCachedLayout(seed, n) ?? saveCachedLayout(seed, pos);
+  const settled = loadCachedLayout(seed * 10 + density, n) ?? saveCachedLayout(seed * 10 + density, pos);
 
   return {
     nodes,

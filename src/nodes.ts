@@ -9,14 +9,15 @@ import {
 } from 'three';
 import type { Graph } from './graph';
 import { haloColor, PALETTE } from './palette';
-import { UNFURL_GLSL } from './motion';
+import { ACTIVATION_GLSL, UNFURL_GLSL } from './motion';
 
 const vertex = /* glsl */ `
   attribute vec3 aOffset;
   attribute float aSize;
   attribute float aKind;
   attribute float aSeed;
-  attribute float aAct;
+  attribute float aBoost;
+  attribute float aIgnite;
   attribute vec3 aHalo;
   attribute float aStart;
   attribute vec3 aAnchor;
@@ -38,10 +39,12 @@ const vertex = /* glsl */ `
   varying vec3 vHalo;
 
   ${UNFURL_GLSL}
+  ${ACTIVATION_GLSL}
 
   void main() {
     vUv = uv;
     vHalo = aHalo;
+    float aAct = max(nodeActivation(aIgnite, uLoopT), aBoost);
     float beat = heartbeat(aDist, uHeartAge, uHeartStrength) * step(0.05, aAct);
     vAct = aAct + beat * 0.9;
     vKind = aKind;
@@ -127,7 +130,7 @@ export class NodeField {
   private readonly start: InstancedBufferAttribute;
   private readonly material: ShaderMaterial;
 
-  constructor(graph: Graph) {
+  constructor(graph: Graph, igniteStart: Float32Array) {
     const n = graph.nodes.length;
     const base = new PlaneGeometry(1, 1);
     const geo = new InstancedBufferGeometry();
@@ -173,7 +176,13 @@ export class NodeField {
     geo.setAttribute('aDist', new InstancedBufferAttribute(dist, 1));
     this.act = new InstancedBufferAttribute(new Float32Array(n), 1);
     this.act.setUsage(35048); // DynamicDrawUsage
-    geo.setAttribute('aAct', this.act);
+    geo.setAttribute('aBoost', this.act);
+    const ignite = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const v = igniteStart[i]!;
+      ignite[i] = Number.isFinite(v) ? v : 1e9;
+    }
+    geo.setAttribute('aIgnite', new InstancedBufferAttribute(ignite, 1));
     geo.boundingSphere = null;
 
     this.material = new ShaderMaterial({
@@ -199,7 +208,8 @@ export class NodeField {
     this.mesh.frustumCulled = false;
   }
 
-  get activation(): Float32Array {
+  /** CPU-side boosts (interactions, pings). Scheduled activation is computed on the GPU. */
+  get boost(): Float32Array {
     return this.act.array as Float32Array;
   }
 

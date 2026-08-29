@@ -27,6 +27,42 @@ export function unfurl(start: number, t: number): number {
   return easeOutBack(x) * foldFactor(t);
 }
 
+/** GLSL twin of schedule.ts activation math so the GPU evaluates the choreography. */
+export const ACTIVATION_GLSL = /* glsl */ `
+  const float LOOP = 20.0;
+  float envelope(float t) {
+    if (t < 17.0) return 1.0;
+    float a = 1.0 - smoothstep(17.0, 19.8, t) * 0.65;
+    float b = 1.0 - smoothstep(19.8, 23.2, t);
+    return a * b;
+  }
+  float ignition(float age) {
+    if (age <= 0.0) return 0.0;
+    float attack = 1.0 - exp(-age * 14.0);
+    float flare = 1.0 + 1.35 * exp(-age * 3.2);
+    return attack * flare;
+  }
+  float nodeActivation(float start, float t) {
+    if (start > 1.0e8) return 0.0;
+    float cur = ignition(t - start) * envelope(t);
+    float res = ignition(t + LOOP - start) * envelope(t + LOOP);
+    return max(cur, res);
+  }
+  vec2 edgeStateAt(float start, float dur, float t) {
+    float age = t - start;
+    if (age <= 0.0) return vec2(0.0);
+    float progress = min(1.0, age / dur);
+    float settle = progress >= 1.0 ? 1.0 + 0.9 * exp(-(age - dur) * 2.5) : 1.0;
+    return vec2(progress, settle * envelope(t));
+  }
+  vec2 edgeState(float start, float dur, float t) {
+    if (start > 1.0e8) return vec2(0.0);
+    vec2 cur = edgeStateAt(start, dur, t);
+    vec2 res = edgeStateAt(start, dur, t + LOOP);
+    return cur.y >= res.y ? cur : res;
+  }
+`;
+
 /** GLSL twin of the functions above. Keep in sync. */
 export const UNFURL_GLSL = /* glsl */ `
   const float BUD = ${BUD.toFixed(3)};
