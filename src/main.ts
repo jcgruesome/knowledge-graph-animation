@@ -38,6 +38,8 @@ import { LoopExporter } from './export';
 import { DEFAULT_TINT } from './signals';
 import { unfurl } from './motion';
 import { SoundDesign } from './audio';
+import { VolumetricHazeEffect } from './volumetrics';
+import { OVERLAY_LAYER, TRAIL_LAYER, TrailAccumulator } from './trails';
 
 const SEED = 20260828;
 
@@ -153,13 +155,22 @@ function makeStreak(): Mesh {
 }
 const streakIn = makeStreak();
 const streakOut = makeStreak();
+
+// Motion blur: signals and streaks render through a decaying HDR buffer.
+const trails = new TrailAccumulator(window.innerWidth, window.innerHeight);
+signals.points.layers.set(TRAIL_LAYER);
+streakIn.layers.set(TRAIL_LAYER);
+streakOut.layers.set(TRAIL_LAYER);
+scene.add(trails.overlay);
+camera.layers.enable(OVERLAY_LAYER);
+camera.layers.enable(TRAIL_LAYER);
 function placeStreak(mesh: Mesh, at: Vector3, alpha: number, color: typeof PALETTE.white): void {
   mesh.visible = alpha > 0.01;
   if (!mesh.visible) return;
   const d = camera.position.distanceTo(at);
   mesh.position.copy(at);
   mesh.quaternion.copy(camera.quaternion);
-  mesh.scale.set(d * 0.55, d * 0.03, 1);
+  mesh.scale.set(d * 0.3, d * 0.02, 1);
   const mat = mesh.material as ShaderMaterial;
   mat.uniforms.uAlpha!.value = alpha;
   (mat.uniforms.uColor!.value as typeof PALETTE.white).copy(color);
@@ -214,7 +225,13 @@ const godRays = new GodRaysEffect(camera, sun, {
   kernelSize: KernelSize.SMALL,
   blur: true,
 });
-composer.addPass(new EffectPass(camera, godRays, bloom, tone, vignette, noise));
+const haze = new VolumetricHazeEffect();
+haze.setStatic(
+  new Vector3(graph.positions[graph.coreHub * 3]!, graph.positions[graph.coreHub * 3 + 1]!, graph.positions[graph.coreHub * 3 + 2]!),
+  graph.clusters.map((c) => new Vector3(...c.center)),
+  [PALETTE.electricGreen, PALETTE.cyberBlue, PALETTE.enterpriseViolet.clone().lerp(PALETTE.hotMagenta, 0.3)].map((c) => new Vector3(c.r, c.g, c.b)),
+);
+composer.addPass(new EffectPass(camera, haze, godRays, bloom, tone, vignette, noise));
 composer.addPass(new EffectPass(camera, new SMAAEffect()));
 
 // ---------------------------------------------------------------- paths
@@ -866,6 +883,13 @@ function step(dt: number, outW = window.innerWidth, outH = window.innerHeight): 
   lastOverlay = computeOverlay(t, outW, outH);
   applyOverlayToDom(lastOverlay);
 
+  haze.updateFrame(
+    camera,
+    elapsed,
+    0.25 + 1.6 * Math.min(rootAct, 1.6),
+    graph.clusters.map((c) => (clusterSum[c.id] as number) / (clusterCount[c.id] as number)),
+  );
+  trails.update(renderer, scene, camera, dt);
   composer.render(dt);
 }
 

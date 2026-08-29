@@ -48,6 +48,8 @@ interactions and traveling pulses are uploaded, through a small per-edge data te
 | `src/cameraRig.ts` | Camera on closed splines (push, glide, recede), pointer parallax, drag look. |
 | `src/motion.ts` | Unfurl math shared by CPU and GLSL: leaves rest as a bud inside their hub and spring out (ease-out-back) as the hub wakes; the graph folds back during the recede. Heartbeat wave function. |
 | `src/audio.ts` | Sound design: room tone, whoosh-to-chime landing, pentatonic plucks per spoke, granular ticks per flower, convergence pad, one bell for the answer. |
+| `src/volumetrics.ts` | Ray-marched single-scattering haze (22 jittered steps): a fog volume that thickens around awake systems and is lit by the root, so the god rays travel through a real medium. |
+| `src/trails.ts` | Motion blur for the light layer: signals and streaks accumulate in a decaying HDR buffer (frame-rate independent, energy-conserving) composited back additively. |
 | `src/export.ts` | MediaRecorder loop export with HUD composited onto the frame and audio muxed. |
 | `src/main.ts` | Scene, post (god rays from the root, bloom, ACES, vignette, grain, SMAA), rack focus, anamorphic streaks, dolly-zoom on the answer, interaction, HUD, region labels, run log, typed query, decoding answer card. |
 
