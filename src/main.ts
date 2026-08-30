@@ -30,6 +30,7 @@ import { buildGraph, type Density } from './graph';
 import { ANSWER, buildSchedule, LAND, LOOP, edgeState, envelope, ignition, nodeActivation } from './schedule';
 import { NodeField } from './nodes';
 import { EdgeField } from './edges';
+import { AgentSearch } from './agentSearch';
 import { SignalField } from './signals';
 import { ClusterFields, createBackdrop, createDust } from './atmosphere';
 import { CameraRig } from './cameraRig';
@@ -429,8 +430,9 @@ const labelEls: LabelEl[] = schedule.labels.map((l) => {
 const queryEl = el('query');
 const cardEl = el('card');
 const cardVerified = el('card-verified');
+const CARD_ROWS = 6;
 const cardRows: Array<{ el: HTMLDivElement; label: HTMLSpanElement; value: HTMLSpanElement }> = [];
-for (let i = 0; i < 6; i++) {
+for (let i = 0; i < CARD_ROWS; i++) {
   const row = document.createElement('div');
   row.className = 'row';
   const label = document.createElement('span');
@@ -472,6 +474,7 @@ interface CardState {
 interface OverlayState {
   card: CardState;
   query: string; // typed customer query, partial
+  queryComplete: boolean;
   queryOpacity: number;
   labels: LabelPlacement[];
   log: LogPlacement[];
@@ -502,11 +505,13 @@ function computeOverlay(t: number, w: number, h: number): OverlayState {
     placed.push({ x, y });
     return { x, y, opacity: Math.min(1, age / 0.7) * env, name, count };
   });
+  // A submitted query displaces the rotating sample for as long as it stands.
+  const activeQuery = userQuery ?? QUERIES[lastLoop % QUERIES.length]!;
   const shown = schedule.events.filter((e) => e.t <= t).slice(-LOG_LINES);
   const log: LogPlacement[] = shown.map((ev, i) => {
     const rank = shown.length - 1 - i;
     return {
-      text: ev.text.replace('{QUERY}', QUERIES[lastLoop % QUERIES.length]!),
+      text: ev.text.replace('{QUERY}', activeQuery),
       opacity: Math.max(0.25, 1 - rank * 0.13) * env * Math.min(1, (t - ev.t) / 0.25),
       answer: ev.t >= ANSWER,
     };
@@ -514,27 +519,38 @@ function computeOverlay(t: number, w: number, h: number): OverlayState {
   let beat = BEATS[0]![1];
   for (const [time, label] of BEATS) if (t >= time) beat = label;
   // Customer query types itself in as the signal streaks toward the root.
-  const fullQuery = QUERIES[lastLoop % QUERIES.length]!;
+  const fullQuery = activeQuery;
   const typeAge = t - (LAND - 2.0);
   const typed = typeAge < 0 ? 0 : Math.min(fullQuery.length, Math.floor(typeAge * 24));
   const queryOpacity = t < LAND - 2.0 ? 0 : t < 9.5 ? Math.min(1, typeAge * 3) : Math.max(0, 1 - (t - 9.5) * 1.4);
   // Answer card decodes line by line after the answer leaves.
   const cardAge = t - ANSWER;
-  const [robot = '', payload = '', application = ''] = fullQuery.split(' · ').slice(1);
+  const parts = fullQuery.split(' · ').slice(1);
+  const [robot = '', payload = '', application = ''] = parts;
   const modules = ANSWER_MODULES[lastLoop % ANSWER_MODULES.length]!;
+  // A sample query carries its own structure; a typed one is shown as asked.
+  const head = parts.length >= 3
+    ? [
+        { label: 'Robot', value: robot, decode: Math.min(1, Math.max(0, (cardAge - 0.35) / 0.5)) },
+        { label: 'Payload', value: payload, decode: Math.min(1, Math.max(0, (cardAge - 0.55) / 0.5)) },
+        { label: 'Application', value: application, decode: Math.min(1, Math.max(0, (cardAge - 0.75) / 0.5)) },
+      ]
+    : [{ label: 'Query', value: fullQuery, decode: Math.min(1, Math.max(0, (cardAge - 0.35) / 0.6)) }];
+  const lines = [
+    ...head,
+    ...modules.map((m, i) => ({ label: m[0], value: m[1], decode: Math.min(1, Math.max(0, (cardAge - 1.0 - i * 0.28) / 0.7)) })),
+  ];
+  // The DOM keeps one row per line and never clears the ones it does not touch.
+  while (lines.length < CARD_ROWS) lines.push({ label: '', value: '', decode: 0 });
   const card: CardState = {
     visible: cardAge >= 0.35 && env > 0.05,
-    lines: [
-      { label: 'Robot', value: robot, decode: Math.min(1, Math.max(0, (cardAge - 0.35) / 0.5)) },
-      { label: 'Payload', value: payload, decode: Math.min(1, Math.max(0, (cardAge - 0.55) / 0.5)) },
-      { label: 'Application', value: application, decode: Math.min(1, Math.max(0, (cardAge - 0.75) / 0.5)) },
-      ...modules.map((m, i) => ({ label: m[0], value: m[1], decode: Math.min(1, Math.max(0, (cardAge - 1.0 - i * 0.28) / 0.7)) })),
-    ],
+    lines,
     verified: Math.min(1, Math.max(0, (cardAge - 2.2) / 0.5)) * env,
   };
   return {
     card,
     query: fullQuery.slice(0, typed),
+    queryComplete: typed >= fullQuery.length,
     queryOpacity: queryOpacity * env,
     labels,
     log,
@@ -568,7 +584,7 @@ function applyOverlayToDom(o: OverlayState): void {
   progressEl.style.width = `${o.progress * 100}%`;
   queryEl.textContent = o.query;
   queryEl.style.opacity = o.queryOpacity.toFixed(3);
-  queryEl.classList.toggle('typing', o.query.length > 0 && o.query.length < (QUERIES[lastLoop % QUERIES.length]?.length ?? 0));
+  queryEl.classList.toggle('typing', o.query.length > 0 && !o.queryComplete);
   cardEl.classList.toggle('visible', o.card.visible);
   if (o.card.visible) {
     o.card.lines.forEach((line, i) => {
@@ -701,6 +717,8 @@ function drawOverlay(ctx: CanvasRenderingContext2D, w: number, h: number, o: Ove
 const timer = new Timer();
 let elapsed = 0;
 let paused = false;
+/** The query the viewer asked, if they have asked one. Outlives the loop that ran it. */
+let userQuery: string | null = null;
 let lastLoop = -1;
 const nodeAct = nodes.boost;
 // Awake fraction per cluster, from sorted ignition times (no per-node CPU work per frame).
@@ -741,6 +759,7 @@ function step(dt: number, outW = window.innerWidth, outH = window.innerHeight): 
     voiceEl.textContent = VOICE[voiceIndex] ?? '';
   }
   if (exporter.active) voiceEl.textContent = '';
+  search.setHidden(exporter.active);
 
   applyHeldKeys(dt, shiftHeld);
   rig.update(t, elapsed, dt);
@@ -930,6 +949,36 @@ const exporter = new LoopExporter(renderer, composer, camera, canvas, {
   },
 });
 
+// ---------------------------------------------------------------- agent search
+/**
+ * Where the thrown point of light should be aimed: the screen position the inbound
+ * query signal departs from, so the hand-off between DOM and scene is continuous.
+ */
+function handoffPoint(): { x: number; y: number } {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const p = inboundStart.clone().project(camera);
+  // Anything behind the camera projects mirrored; send the point off the top instead.
+  if (p.z > 1) return { x: w * 0.5, y: -70 };
+  const x = (p.x * 0.5 + 0.5) * w;
+  const y = (-p.y * 0.5 + 0.5) * h;
+  return { x: Math.max(-90, Math.min(w + 90, x)), y: Math.max(-90, Math.min(h + 90, y)) };
+}
+
+const search = new AgentSearch({
+  handoff: handoffPoint,
+  flightSeconds: 2.0, // matches the scheduled inbound signal, LAND - 2.0 → LAND
+  launch: (query) => {
+    userQuery = query;
+    injections.length = 0;
+    // Land on the beat the inbound signal departs, one loop on, so the search runs whole.
+    elapsed = (Math.floor(elapsed / LOOP) + 1) * LOOP + (LAND - 2.0);
+    paused = false;
+    rig.release();
+    sound.resetClock();
+  },
+});
+
 // ---------------------------------------------------------------- events
 // Camera: drag or arrow keys orbit, shift+drag / shift+arrows pan, wheel dollies. Any input
 // takes the camera over; a few idle seconds hand it back to the cinematic path.
@@ -997,6 +1046,7 @@ window.addEventListener(
 );
 window.addEventListener('keydown', (ev) => {
   unlockAudio();
+  if (search.typing) return;
   if (ev.key === 'm') {
     sound.setMuted(!sound.muted);
     soundHint.textContent = sound.muted ? 'M unmutes sound' : 'M mutes sound';
@@ -1034,7 +1084,7 @@ function applyHeldKeys(dt: number, shift: boolean): void {
 }
 let shiftHeld = false;
 window.addEventListener('keydown', (ev) => {
-  if (ev.key === 'Shift') shiftHeld = true;
+  if (!search.typing && ev.key === 'Shift') shiftHeld = true;
 });
 window.addEventListener('keyup', (ev) => {
   if (ev.key === 'Shift') shiftHeld = false;
