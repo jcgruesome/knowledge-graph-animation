@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Firebreak</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { height: 100%; background: #0D1117; overflow: hidden; }
+      body { font: 400 13px/1.4 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; color: #8B9AAD; }
+      canvas { display: block; touch-action: none; cursor: crosshair; }
+      #hud { position: fixed; inset: 0; pointer-events: none; }
+      .tl { position: absolute; top: 22px; left: 24px; letter-spacing: .04em; }
+      .tr { position: absolute; top: 22px; right: 24px; text-align: right; font-variant-numeric: tabular-nums; }
+      .big { font-size: 30px; color: #E6EDF3; font-weight: 300; letter-spacing: -.01em; }
+      .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .16em; color: #56606E; margin-top: 3px; }
+      #tip { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); font-size: 15px;
+             color: #C9D4E0; letter-spacing: .02em; transition: opacity .6s; text-align: center; }
+      #over { position: absolute; inset: 0; display: none; place-items: center; background: rgba(13,17,23,.72); }
+      #over.on { display: grid; }
+      #over .card { text-align: center; }
+      #over h1 { font-size: 13px; text-transform: uppercase; letter-spacing: .24em; color: #FF006E; font-weight: 500; }
+      #over .score { font-size: 76px; font-weight: 200; color: #fff; letter-spacing: -.03em; margin: 6px 0 2px; }
+      #over .sub { color: #8B9AAD; }
+      #over .again { margin-top: 26px; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #00D9FF; }
+    </style>
+  </head>
+  <body>
+    <div id="hud">
+      <div class="tl"><div class="big" id="clock">0.0s</div><div class="lbl">Held</div></div>
+      <div class="tr"><div class="big" id="alive">2216</div><div class="lbl">Nodes clean</div></div>
+      <div id="tip">Fire spreads along the strands. <b style="color:#FFE500">Drag through them to cut.</b></div>
+      <div id="over"><div class="card">
+        <h1>The graph is lost</h1>
+        <div class="score" id="final">0.0s</div>
+        <div class="sub" id="detail"></div>
+        <div class="again">Press R to try again</div>
+      </div></div>
+    </div>
+    <script type="module" src="/src/firebreak/main.ts"></script>
+  </body>
+</html>
