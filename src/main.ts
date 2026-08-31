@@ -939,6 +939,8 @@ const exporter = new LoopExporter(renderer, composer, camera, canvas, {
     // Start on the second loop so the previous loop's embers exist at t=0: seamless seam.
     elapsed = LOOP;
     injections.length = 0;
+    userQuery = null; // the export is the canonical loop, never a viewer's question
+
     paused = false;
     rig.release();
     sound.resetClock();
@@ -969,6 +971,7 @@ const search = new AgentSearch({
   handoff: handoffPoint,
   flightSeconds: 2.0, // matches the scheduled inbound signal, LAND - 2.0 → LAND
   launch: (query) => {
+    if (exporter.active) return;
     userQuery = query;
     injections.length = 0;
     // Land on the beat the inbound signal departs, one loop on, so the search runs whole.

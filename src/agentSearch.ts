@@ -34,6 +34,7 @@ export class AgentSearch {
   private readonly opts: AgentSearchOptions;
   private timers: number[] = [];
   private busy = false;
+  private hadFocus = false;
 
   constructor(opts: AgentSearchOptions) {
     this.opts = opts;
@@ -55,14 +56,24 @@ export class AgentSearch {
       if (ev.key === 'Escape') this.input.blur();
       ev.stopPropagation();
     });
+    // The scene's camera and node-pick handlers are bound to window with no target
+    // check, so without this a click in the field injects a stray query signal into
+    // whichever node is nearest, and drag-selecting text orbits the camera.
+    for (const type of ['pointerdown', 'pointermove', 'pointerup', 'click', 'wheel', 'contextmenu']) {
+      this.root.addEventListener(type, (ev) => ev.stopPropagation());
+    }
 
     this.after(700, () => this.root.classList.add('awake'));
     this.after(1500, () => this.root.classList.add('open'));
   }
 
-  /** True while the field has the keyboard, so global shortcuts must stand down. */
+  /**
+   * True while anything in the field holds the keyboard, so global shortcuts stand
+   * down. This has to cover the send button too: with focus there, Space reached the
+   * global handler and paused the animation instead of submitting.
+   */
   get typing(): boolean {
-    return document.activeElement === this.input;
+    return this.root.contains(document.activeElement);
   }
 
   /** Hidden during export, where the frame must contain no chrome. */
@@ -85,6 +96,7 @@ export class AgentSearch {
     const query = this.input.value.trim();
     if (!query || this.busy) return;
     this.busy = true;
+    this.hadFocus = this.root.contains(document.activeElement);
     this.input.blur();
     this.input.disabled = true;
     this.syncSend();
@@ -124,6 +136,8 @@ export class AgentSearch {
       this.root.classList.remove('launching');
       this.root.classList.add('open');
       this.syncSend();
+      // Submitting blurs the field; a keyboard user gets it back rather than re-tabbing.
+      if (this.hadFocus) this.input.focus();
     });
   }
 }

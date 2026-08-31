@@ -84,7 +84,7 @@
       .log .line { white-space: nowrap; }
       .log .line.answer { color: var(--volt-yellow); }
       .progress {
-        position: fixed; left: 0; right: 0; bottom: 0; height: 2px;
+        position: fixed; left: 0; right: 0; bottom: 0; height: 2px; pointer-events: none;
         background: rgba(139,154,173,0.10);
       }
       .progress > i {
@@ -137,16 +137,16 @@
         opacity: 0; transform: scale(0.4); transition: opacity 0.5s ease 0.34s, transform 0.5s ease 0.34s;
       }
       .search.open .spark { opacity: 1; transform: scale(1); }
-      .search.open .shell.busy .spark { animation: pulse 1.1s ease-in-out infinite; }
-      @keyframes pulse { 50% { opacity: 0.35; transform: scale(0.72); } }
       .search input {
         flex: 1 1 auto; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent;
-        font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 500; font-size: 15px;
+        font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 500;
+        /* 16px is the floor that stops iOS Safari zooming the page on focus. */
+        font-size: 16px;
         letter-spacing: 0.02em; color: #e9eef3; caret-color: var(--cyber-blue);
         opacity: 0; transition: opacity 0.45s ease 0.36s;
       }
       .search.open input { opacity: 1; }
-      .search input::placeholder { color: rgba(139, 154, 173, 0.55); }
+      .search input::placeholder { color: rgba(139, 154, 173, 0.85); }
       .search input:disabled { color: rgba(139, 154, 173, 0.5); }
       .send {
         flex: 0 0 auto; width: 40px; height: 40px; border-radius: 999px; border: 0; padding: 0;
@@ -185,6 +185,28 @@
         pointer-events: none; z-index: 6; transition: opacity 0.4s ease;
       }
       .blink.on { opacity: 1; }
+      @media (max-width: 760px) {
+        .hud { padding: 20px 20px 118px; }
+        .hud .hint { display: none; }
+        .log { right: 20px; bottom: 186px; font-size: 10px; }
+        .search { bottom: 28px; }
+        /* the bottom-left stack is flex: 0 0 auto by default and would run off-screen */
+        .hud .bottom-left { flex: 1 1 auto; min-width: 0; max-width: 100%; }
+        .hud .voice { font-size: 17px; max-width: 100%; }
+        .query { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+        .card .row { grid-template-columns: 110px auto; }
+      }
+      /* Landscape phones: there is no room for the run log or the controls hint
+         alongside the field, and the HUD has to reserve the field's full height. */
+      @media (max-height: 560px) {
+        .log { display: none; }
+        .hud { padding: 16px 24px 116px; }
+        .hud .hint { display: none; }
+        .hud .bottom-left { flex: 1 1 auto; min-width: 0; max-width: 100%; }
+        .hud .voice { font-size: 16px; max-width: 100%; }
+        .query { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+        .search { bottom: 20px; }
+      }
     </style>
   </head>
   <body>
