@@ -33,7 +33,7 @@ produce a comparable first draft with no hand-editing, for any company, in minut
 ## Pipeline
 
 ```
-generate-demo --url <prospect-url> --company "<name>" [--locale auto|es|en] [--density 1|2|3]
+generate-demo --url <prospect-url> --company "<name>" [--locale auto|es|en] [--density 1|2|3] [--seed-variant <n>]
 ```
 
 1. **Scrape** — adapted from `design-system/packages/animator/src/lib/scrape.ts`: fetch the
@@ -169,6 +169,45 @@ scrape/palette-extraction/Q&A-generation logic is copied into
 `tools/generate-demo/vendor/` in this repo, with a header comment naming the source file and
 commit it was ported from. If reuse expands beyond these two consumers later, promoting the vendored
 code to a real published package is a follow-up, not a v1 requirement.
+
+This means v1 makes **no changes to `design-system` at all** — it only reads from it once, at
+port time, as a reference implementation. See "Surfacing this in the DAM" below for the separate
+question of whether this capability should later become part of the DAM itself.
+
+## Locale conflicts, reruns, and preview hygiene
+
+- **`--locale` vs. detected site language.** If the operator passes an explicit `--locale` that
+  differs from what the scrape detects, Claude generates in the *requested* locale, translating
+  from the scraped source language rather than refusing — the prompt says so explicitly. `auto`
+  (the default) always uses the detected language.
+- **Reruns are deterministic by design** (`seed = hash(company)`), which means a bad first draft
+  can't be fixed by just running the same command again — structure and layout will be identical.
+  `--seed-variant <n>` (default 0) salts the hash for an intentional do-over without changing the
+  company slug or overwriting the first draft's kit file.
+- **Preview deployments accumulate.** Every run creates a new, un-aliased Vercel preview and none
+  are cleaned up automatically. Fine for occasional use; if this gets used often, pruning stale
+  `generate-demo` previews is a fast-follow, not a v1 requirement.
+
+## Surfacing this in the DAM
+
+The user's original ask was to add this *to the DAM*. What's specified above is a self-contained
+CLI in `knowledge-graph-animation` that vendors DAM logic for reference — it does not touch
+`design-system`, and running it does not make this capability visible or usable from inside the
+DAM itself. That's a deliberate v1 scope cut (confirmed in the "tool location" decision above), not
+an oversight, but it means the original ask isn't fully done at the end of this plan.
+
+Making it actually part of the DAM — e.g. a new render mode alongside the existing prospect-mockup
+generator, wired into the DAM's governance/QC/sharing routes so a generated demo goes through the
+same review path as other prospect assets — is real, separate work: a different repo, its own
+Linear team (`DSX-<n>`, per `design-system/CONTRIBUTING.md`), its own branch/PR/CI/deploy workflow.
+It is not something to fold into this repo's implementation plan silently.
+
+**Recommendation:** ship v1 as scoped here, then open a `DSX` issue for "surface the knowledge-graph
+generator in the DAM" as explicit, separately-planned follow-up work — most naturally scoped once
+v1's actual output quality (palette algorithm, grounding gate) has been validated against a couple
+of real prospects, so the DAM integration is designed around a proven pipeline rather than a
+theoretical one. Whether that follow-up is done in this same session/lane-style workflow or handed
+to whoever owns `design-system` day-to-day is the user's call, not something to assume either way.
 
 ## Risks
 
