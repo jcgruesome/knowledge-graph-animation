@@ -34,12 +34,11 @@ import { ANSWER, buildSchedule, LAND, LOOP, edgeState, envelope, ignition, nodeA
 import { NodeField } from './nodes';
 import { EdgeField } from './edges';
 import { AgentSearch } from './agentSearch';
-import { SignalField } from './signals';
+import { SignalField, DEFAULT_TINT, syncDefaultTint } from './signals';
 import { ClusterFields, createBackdrop, createDust } from './atmosphere';
 import { CameraRig } from './cameraRig';
 import { haloColor, buildPalette, PALETTE, VIOLET_HALO } from './palette';
 import { LoopExporter } from './export';
-import { DEFAULT_TINT } from './signals';
 import { unfurl } from './motion';
 import { SoundDesign } from './audio';
 import { VolumetricHazeEffect } from './volumetrics';
@@ -51,6 +50,7 @@ const kitSlug = new URLSearchParams(location.search).get('kit');
 const kit: BrandKit | null = kitSlug ? await loadBrandKit(kitSlug) : null;
 const dict = getDictionary(kit?.locale ?? 'en');
 buildPalette(kit?.palette);
+syncDefaultTint(); // DEFAULT_TINT is captured at signals.ts import time; re-derive it post-override.
 const queries = kit?.queries ?? DEFAULT_QUERIES;
 const SEED = kit?.seed ?? 20260828;
 
