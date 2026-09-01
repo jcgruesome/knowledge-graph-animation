@@ -1,22 +1,32 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Ccircle cx=%278%27 cy=%278%27 r=%275%27 fill=%27%2373B400%27/%3E%3C/svg%3E" />
-    <title>ReshapeX · Signal becomes intelligence</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Ccircle cx=%278%27 cy=%278%27 r=%275%27 fill=%27%23E30613%27/%3E%3C/svg%3E" />
+    <title>item · La señal se convierte en respuesta</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@500;600&family=Newsreader:ital,opsz,wght@1,6..72,400&display=swap" rel="stylesheet" />
     <style>
       :root {
-        --deep-space: #0d1117;
-        --steel: #8b9aad;
-        --cyber-blue: #00d9ff;
-        --electric-green: #73b400;
-        --enterprise-violet: #340090;
-        --hot-magenta: #ff006e;
-        --volt-yellow: #ffe500;
+        /* item24 brand tokens: chrome and the primary CTA */
+        --item-red: #e30613;
+        --item-red-dark: #b0000a;
+        --item-black: #1a1a1a;
+        --item-charcoal: #333333;
+        --item-gray: #707070;
+        --item-gray-light: #e5e5e5;
+        --item-off-white: #f7f7f7;
+        --item-white: #ffffff;
+        /* graph-echo accents: mirrors src/palette.ts, warm/item-adjacent rather than literal brand */
+        --deep-space: var(--item-black);
+        --steel: var(--item-gray);
+        --cyber-blue: #ff5a3c;
+        --electric-green: var(--item-red);
+        --enterprise-violet: #7a0d14;
+        --hot-magenta: #ff1f5a;
+        --volt-yellow: #ffc233;
       }
       html, body { margin: 0; height: 100%; background: var(--deep-space); overflow: hidden; }
       canvas { display: block; width: 100vw; height: 100vh; }
@@ -26,66 +36,70 @@
         padding: 32px 40px 138px; box-sizing: border-box;
         color: var(--steel);
         font-family: 'Hanken Grotesk', system-ui, sans-serif;
-        font-weight: 600; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+        font-weight: 600; font-size: 15px; letter-spacing: 0.1em; text-transform: uppercase;
         opacity: 0; transition: opacity 1.6s ease;
       }
       .hud.visible { opacity: 1; }
       .hud .row { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
-      .hud .logo { height: 22px; width: auto; display: block; opacity: 0.92; }
-      .hud .beat { color: rgba(139,154,173,0.55); min-width: 160px; text-align: right; }
+      .hud .row.top { align-items: center; }
+      .hud .brand { display: flex; align-items: center; gap: 14px; }
+      .hud .logo { height: 26px; width: auto; display: block; opacity: 0.92; }
+      .hud .brand-x { font-size: 14px; color: rgba(112,112,112,0.6); font-weight: 500; }
+      .hud .sound-hint { color: rgba(112,112,112,0.5); font-size: 11px; letter-spacing: 0.1em; margin-left: 4px; }
+      .hud .beat { color: rgba(112,112,112,0.6); min-width: 160px; text-align: right; }
       .hud .status { color: var(--volt-yellow); margin-right: 16px; }
       .hud .status:empty { display: none; }
       .hud .voice {
         font-family: 'Newsreader', Georgia, serif; font-style: italic; font-weight: 400;
-        font-size: 22px; letter-spacing: 0; text-transform: none; color: #e5e9ec;
+        font-size: 30px; letter-spacing: 0; text-transform: none; color: #f7f7f7;
         opacity: 0; transition: opacity 1.4s ease; max-width: 36ch; text-wrap: balance;
       }
       .hud .voice.visible { opacity: 0.85; }
-      .hud .hint { color: rgba(139,154,173,0.45); }
-      .hud .bottom-left { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; flex: 0 0 auto; }
-      .hud .hint { max-width: 60ch; text-align: right; }
+      .hud .bottom-left { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; flex: 0 0 auto; }
       .query {
-        font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 500; font-size: 13px;
-        letter-spacing: 0.04em; text-transform: none; color: rgba(229,233,236,0.85); opacity: 0;
+        font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 500; font-size: 17px;
+        letter-spacing: 0.02em; text-transform: none; color: rgba(247,247,247,0.85); opacity: 0;
         min-height: 1.2em; white-space: nowrap;
       }
       .query.typing::after { content: '▍'; color: var(--cyber-blue); animation: blink 0.9s steps(1) infinite; }
       @keyframes blink { 50% { opacity: 0; } }
       .card {
-        display: none; flex-direction: column; gap: 4px; text-transform: none; letter-spacing: 0;
+        display: none; flex-direction: column; gap: 6px; text-transform: none; letter-spacing: 0;
         font-family: 'Hanken Grotesk', system-ui, sans-serif;
       }
       .card.visible { display: flex; }
-      .card .row { display: grid; grid-template-columns: 150px auto; gap: 8px; align-items: baseline; opacity: 0; transition: opacity 0.3s ease; }
-      .card .k { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(139,154,173,0.85); }
-      .card .v { font-size: 13px; font-weight: 500; letter-spacing: 0.04em; color: rgba(139,154,173,0.7); font-variant-numeric: tabular-nums; }
-      .card .v.settled { color: rgba(229,233,236,0.95); }
-      .card .verified { margin-top: 6px; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--electric-green); opacity: 0; }
+      .card .row { display: grid; grid-template-columns: 150px auto; gap: 10px; align-items: baseline; opacity: 0; transition: opacity 0.3s ease; }
+      .card .k { font-size: 13px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(112,112,112,0.85); }
+      .card .v { font-size: 17px; font-weight: 500; letter-spacing: 0.02em; color: rgba(112,112,112,0.7); font-variant-numeric: tabular-nums; }
+      .card .v.settled { color: rgba(247,247,247,0.95); }
+      .card .verified { margin-top: 8px; font-size: 13px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--electric-green); opacity: 0; }
       .labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
       .label {
         position: absolute; left: 0; top: 0; transform: translate(0, 0);
-        font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 600; font-size: 10px;
-        letter-spacing: 0.12em; text-transform: uppercase; color: rgba(229,233,236,0.78);
+        font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 600; font-size: 13px;
+        letter-spacing: 0.1em; text-transform: uppercase; color: rgba(247,247,247,0.78);
         white-space: nowrap; opacity: 0; will-change: transform, opacity;
         padding-left: 14px;
       }
       .label::before {
         content: ''; position: absolute; left: 0; top: 50%; width: 10px; height: 1px;
-        background: rgba(139,154,173,0.6);
+        background: rgba(112,112,112,0.6);
       }
-      .label small { color: rgba(139,154,173,0.85); margin-left: 6px; font-weight: 500; }
+      .label small { color: rgba(112,112,112,0.85); margin-left: 6px; font-weight: 500; }
+      /* The step-by-step process readout: replaces the old keyboard-shortcut hint with a
+         larger, plain-language narration of what the graph is doing right now. */
       .log {
-        position: fixed; right: 40px; bottom: 232px; text-align: right; pointer-events: none;
-        font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 500; font-size: 11px;
-        letter-spacing: 0.04em; color: rgba(139,154,173,0.85); line-height: 1.7;
-        font-variant-numeric: tabular-nums; opacity: 0; transition: opacity 1.6s ease;
+        position: fixed; right: 40px; bottom: 118px; width: min(440px, 42vw); text-align: left;
+        pointer-events: none; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 500;
+        font-size: 16px; letter-spacing: 0.01em; text-transform: none; color: rgba(112,112,112,0.85);
+        line-height: 1.7; font-variant-numeric: tabular-nums; opacity: 0; transition: opacity 1.6s ease;
       }
       .log.visible { opacity: 1; }
-      .log .line { white-space: nowrap; }
+      .log .line { white-space: normal; text-wrap: pretty; }
       .log .line.answer { color: var(--volt-yellow); }
       .progress {
         position: fixed; left: 0; right: 0; bottom: 0; height: 2px; pointer-events: none;
-        background: rgba(139,154,173,0.10);
+        background: rgba(112,112,112,0.10);
       }
       .progress > i {
         position: absolute; left: 0; top: 0; bottom: 0; width: 0;
@@ -108,8 +122,8 @@
         position: relative; box-sizing: border-box;
         width: 9px; height: 9px; border-radius: 999px;
         border: 1px solid transparent;
-        background: var(--cyber-blue);
-        box-shadow: 0 0 14px 4px rgba(0, 217, 255, 0.85), 0 0 44px 10px rgba(0, 217, 255, 0.30);
+        background: var(--item-red);
+        box-shadow: 0 0 14px 4px rgba(227, 6, 19, 0.85), 0 0 44px 10px rgba(227, 6, 19, 0.30);
         display: flex; align-items: center; gap: 12px; padding: 0;
         transition:
           width 0.92s cubic-bezier(0.16, 1, 0.3, 1),
@@ -119,21 +133,21 @@
       }
       .search.open .shell {
         width: min(660px, 82vw); height: 56px; padding: 0 8px 0 20px;
-        background: rgba(13, 17, 23, 0.66);
-        border-color: rgba(0, 217, 255, 0.20);
-        box-shadow: 0 0 0 1px rgba(0, 217, 255, 0.05), 0 22px 70px rgba(0, 0, 0, 0.6),
+        background: rgba(26, 26, 26, 0.66);
+        border-color: rgba(227, 6, 19, 0.20);
+        box-shadow: 0 0 0 1px rgba(227, 6, 19, 0.05), 0 22px 70px rgba(0, 0, 0, 0.6),
                     inset 0 1px 0 rgba(255, 255, 255, 0.045);
         backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
       }
       .search.open .shell:focus-within {
-        border-color: rgba(0, 217, 255, 0.44);
-        box-shadow: 0 0 0 1px rgba(0, 217, 255, 0.14), 0 0 34px rgba(0, 217, 255, 0.16),
+        border-color: rgba(227, 6, 19, 0.44);
+        box-shadow: 0 0 0 1px rgba(227, 6, 19, 0.14), 0 0 34px rgba(227, 6, 19, 0.16),
                     0 22px 70px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.045);
       }
       /* the original point of light, kept as the field's leading mark */
       .spark {
-        flex: 0 0 auto; width: 6px; height: 6px; border-radius: 999px; background: var(--cyber-blue);
-        box-shadow: 0 0 10px 2px rgba(0, 217, 255, 0.9);
+        flex: 0 0 auto; width: 6px; height: 6px; border-radius: 999px; background: var(--item-red);
+        box-shadow: 0 0 10px 2px rgba(227, 6, 19, 0.9);
         opacity: 0; transform: scale(0.4); transition: opacity 0.5s ease 0.34s, transform 0.5s ease 0.34s;
       }
       .search.open .spark { opacity: 1; transform: scale(1); }
@@ -142,28 +156,28 @@
         font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 500;
         /* 16px is the floor that stops iOS Safari zooming the page on focus. */
         font-size: 16px;
-        letter-spacing: 0.02em; color: #e9eef3; caret-color: var(--cyber-blue);
+        letter-spacing: 0.02em; color: #f7f7f7; caret-color: var(--item-red);
         opacity: 0; transition: opacity 0.45s ease 0.36s;
       }
       .search.open input { opacity: 1; }
-      .search input::placeholder { color: rgba(139, 154, 173, 0.85); }
-      .search input:disabled { color: rgba(139, 154, 173, 0.5); }
+      .search input::placeholder { color: rgba(112, 112, 112, 0.85); }
+      .search input:disabled { color: rgba(112, 112, 112, 0.5); }
       .send {
         flex: 0 0 auto; width: 40px; height: 40px; border-radius: 999px; border: 0; padding: 0;
         display: grid; place-items: center; cursor: pointer;
-        background: rgba(139, 154, 173, 0.10); color: rgba(139, 154, 173, 0.75);
+        background: rgba(112, 112, 112, 0.10); color: rgba(112, 112, 112, 0.75);
         opacity: 0; transform: scale(0.8);
         transition: opacity 0.45s ease 0.4s, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.4s,
                     background 0.25s ease, color 0.25s ease;
       }
       .search.open .send { opacity: 1; transform: scale(1); }
       .send svg { width: 17px; height: 17px; display: block; }
-      .send.ready { background: var(--cyber-blue); color: #04121a; }
-      .send.ready:hover { background: #5ce8ff; }
+      .send.ready { background: var(--item-red); color: var(--item-white); }
+      .send.ready:hover { background: var(--item-red-dark); }
       .send:disabled { cursor: default; }
       .search .caption {
         font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 600; font-size: 10px;
-        letter-spacing: 0.16em; text-transform: uppercase; color: rgba(139, 154, 173, 0.42);
+        letter-spacing: 0.16em; text-transform: uppercase; color: rgba(112, 112, 112, 0.42);
         opacity: 0; transition: opacity 0.5s ease 0.5s; white-space: nowrap;
       }
       .search.open .caption { opacity: 1; }
@@ -177,7 +191,7 @@
       .comet {
         position: fixed; left: 0; top: 0; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px;
         border-radius: 999px; background: #fff; pointer-events: none; z-index: 9; opacity: 0;
-        box-shadow: 0 0 16px 5px rgba(0, 217, 255, 0.95), 0 0 52px 14px rgba(0, 217, 255, 0.4);
+        box-shadow: 0 0 16px 5px rgba(227, 6, 19, 0.95), 0 0 52px 14px rgba(227, 6, 19, 0.4);
       }
       /* the frame settles to black while the clock is moved back to the launch beat */
       .blink {
@@ -187,23 +201,21 @@
       .blink.on { opacity: 1; }
       @media (max-width: 760px) {
         .hud { padding: 20px 20px 118px; }
-        .hud .hint { display: none; }
-        .log { right: 20px; bottom: 186px; font-size: 10px; }
+        .log { display: none; }
         .search { bottom: 28px; }
         /* the bottom-left stack is flex: 0 0 auto by default and would run off-screen */
         .hud .bottom-left { flex: 1 1 auto; min-width: 0; max-width: 100%; }
-        .hud .voice { font-size: 17px; max-width: 100%; }
+        .hud .voice { font-size: 21px; max-width: 100%; }
         .query { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
         .card .row { grid-template-columns: 110px auto; }
       }
-      /* Landscape phones: there is no room for the run log or the controls hint
-         alongside the field, and the HUD has to reserve the field's full height. */
+      /* Landscape phones: there is no room for the step readout alongside the field, and
+         the HUD has to reserve the field's full height. */
       @media (max-height: 560px) {
         .log { display: none; }
         .hud { padding: 16px 24px 116px; }
-        .hud .hint { display: none; }
         .hud .bottom-left { flex: 1 1 auto; min-width: 0; max-width: 100%; }
-        .hud .voice { font-size: 16px; max-width: 100%; }
+        .hud .voice { font-size: 18px; max-width: 100%; }
         .query { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
         .search { bottom: 20px; }
       }
@@ -212,21 +224,25 @@
   <body>
     <canvas id="scene"></canvas>
     <div class="hud" id="hud">
-      <div class="row">
-        <img class="logo" src="/reshapex-logo.svg" alt="ReshapeX" />
-        <div class="beat"><span id="status" class="status"></span><span id="beat">Dormant field</span></div>
+      <div class="row top">
+        <div class="brand">
+          <img class="logo" src="/reshapex-logo.svg" alt="ReshapeX" />
+          <span class="brand-x">×</span>
+          <img class="logo" src="/item-logo.svg" alt="item" />
+          <span class="sound-hint" id="sound-hint">Clic para activar el sonido</span>
+        </div>
+        <div class="beat"><span id="status" class="status"></span><span id="beat">Campo en reposo</span></div>
       </div>
       <div class="row">
         <div class="bottom-left">
-          <div class="card" id="card"><div class="verified" id="card-verified">✓ Validated against canonical reference</div></div>
+          <div class="card" id="card"><div class="verified" id="card-verified">✓ Validado contra la referencia técnica oficial</div></div>
           <div class="query" id="query"></div>
-          <div class="voice" id="voice">Signal becomes intelligence.</div>
+          <div class="voice" id="voice">La señal se convierte en respuesta.</div>
         </div>
-        <div class="hint"><span id="sound-hint">Click anywhere for sound</span> · Drag or arrows to orbit · Shift to pan · Scroll to zoom · Click a node to route a query · C returns the camera · Space pauses · E exports one loop</div>
+        <div class="log" id="log"></div>
       </div>
     </div>
     <div class="labels" id="labels"></div>
-    <div class="log" id="log"></div>
     <div class="progress"><i id="progress"></i></div>
     <div class="blink" id="blink"></div>
     <div class="comet" id="comet"></div>
@@ -234,15 +250,15 @@
       <form class="shell" id="search-form" autocomplete="off">
         <span class="spark"></span>
         <input id="search-input" type="text" autocomplete="off" spellcheck="false"
-               aria-label="Ask ReshapeX" placeholder="Ask ReshapeX" />
-        <button class="send" id="search-send" type="submit" aria-label="Send query" disabled>
+               aria-label="Preguntar a item" placeholder="Preguntar a item" />
+        <button class="send" id="search-send" type="submit" aria-label="Enviar consulta" disabled>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M5 12h13M12 5l7 7-7 7" />
           </svg>
         </button>
       </form>
-      <div class="caption" id="search-caption">Press enter to route the query</div>
+      <div class="caption" id="search-caption">Presiona enter para enviar la consulta</div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

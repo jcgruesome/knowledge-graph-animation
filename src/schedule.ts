@@ -1,9 +1,14 @@
 import type { Graph } from './graph';
 import { Random } from './random';
 
-export const LOOP = 20;
-export const LAND = 4.0; // inbound query lands on the catalog root
-export const ANSWER = 16.2; // one answer leaves the root
+/** Stretches the whole choreography for legibility; individual flash/pulse physics stay real-time. */
+export const TIME_SCALE = 3;
+const BASE_LOOP = 20;
+const BASE_LAND = 4.0; // inbound query lands on the catalog root
+const BASE_ANSWER = 16.2; // one answer leaves the root
+export const LOOP = BASE_LOOP * TIME_SCALE;
+export const LAND = BASE_LAND * TIME_SCALE;
+export const ANSWER = BASE_ANSWER * TIME_SCALE;
 
 export interface Signal {
   edge: number;
@@ -54,9 +59,16 @@ export function buildSchedule(graph: Graph, seed: number): Schedule {
   const events: LogEvent[] = [];
   const labels: Label[] = [];
   const p = graph.positions;
-  const CATALOG_NAMES = ['Tool changers', 'Grippers', 'Compliance devices', 'Force/torque sensors', 'Vacuum end-effectors', 'Robot-side adapters', 'Collision sensors', 'Utility couplers'];
-  const DOC_NAMES = ['Adapter relations', 'Interface specs', 'Payload limits'];
-  const fmt = (t: number): string => t.toFixed(2).padStart(5, '0');
+  const CATALOG_NAMES = ['Perfiles de aluminio', 'Sistema modular MB', 'Herrajes y conectores', 'Ruedas y rodamientos', 'Automatización lineal', 'Accesorios y CAD', 'Uniones y brocas', 'Documentación técnica'];
+  const DOC_NAMES = ['Matriz de compatibilidad', 'Especificaciones técnicas', 'Límites de carga'];
+  /** Bakes the scaled, "realistic" elapsed time into log text at construction time. */
+  /** mm:ss elapsed since the query landed, unambiguous at a glance (unlike raw seconds). */
+  const fmt = (t: number): string => {
+    const total = Math.round(t * TIME_SCALE);
+    const mins = Math.floor(total / 60);
+    const secs = total % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const len = (eid: number): number => {
     const e = graph.edges[eid]!;
@@ -112,15 +124,15 @@ export function buildSchedule(graph: Graph, seed: number): Schedule {
         bloom(hub, start + dur, 0.8, keep);
         const name = names[i] ?? `Hub ${hub}`;
         const count = leafCount(hub);
-        labels.push({ node: hub, t: start + dur, text: `${name} · ${count} modules` });
-        events.push({ t: start + dur, text: `${fmt(start + dur)}  ${name.toLowerCase()} · ${count} modules matched` });
+        labels.push({ node: hub, t: start + dur, text: `${name} · ${count} referencias` });
+        events.push({ t: start + dur, text: `${fmt(start + dur)}  Encuentra la familia "${name}": ${count} referencias posibles` });
       });
     // Radial sweep by azimuth around the root.
     const c = cluster.center;
     const rest = hubs
       .filter((h) => !heroSet.has(h))
       .sort((x, y) => Math.atan2(p[x * 3 + 1]! - c[1], p[x * 3]! - c[0]) - Math.atan2(p[y * 3 + 1]! - c[1], p[y * 3]! - c[0]));
-    if (rest.length) events.push({ t: sweepStart, text: `${fmt(sweepStart)}  radial sweep · ${rest.length} product families` });
+    if (rest.length) events.push({ t: sweepStart, text: `${fmt(sweepStart)}  Revisa las otras ${rest.length} familias de producto por si aplican` });
     rest.forEach((hub, i) => {
       const start = sweepStart + (i / Math.max(1, rest.length)) * sweepDur + rng.range(-0.06, 0.06);
       const dur = 0.45 + len(graph.parentEdge[hub]!) * 0.025;
@@ -131,10 +143,10 @@ export function buildSchedule(graph: Graph, seed: number): Schedule {
 
   // 4-7s: root blooms, six hero spokes draw, their flowers open.
   // 6.8-10.4s: the rest of the catalog wakes in a radial sweep.
-  wakeFan(0, LAND, 6, 0.32, 6.8, 3.6, 0.92, CATALOG_NAMES);
-  events.push({ t: LAND - 2.0, text: `${fmt(LAND - 2.0)}  {QUERY}` });
-  events.push({ t: LAND, text: `${fmt(LAND)}  query landed · tooling catalog root` });
-  labels.push({ node: graph.coreHub, t: LAND, text: `Tooling catalog · ${graph.nodes.filter((nd) => nd.cluster === 0 && nd.kind === 0).length} part numbers` });
+  wakeFan(0, BASE_LAND, 6, 0.32, 6.8, 3.6, 0.92, CATALOG_NAMES);
+  events.push({ t: BASE_LAND - 2.0, text: `${fmt(BASE_LAND - 2.0)}  El cliente pregunta: "{QUERY}"` });
+  events.push({ t: BASE_LAND, text: `${fmt(BASE_LAND)}  La pregunta llega al catálogo completo de item` });
+  labels.push({ node: graph.coreHub, t: BASE_LAND, text: `Catálogo item · +4.500 referencias` });
 
   // 8.4s: hero bridge to the documents system; it wakes 10-12.5s.
   const docsBridge = graph.bridges[0]!;
@@ -147,9 +159,9 @@ export function buildSchedule(graph: Graph, seed: number): Schedule {
     edgeFrom[docsBridge] = graph.edges[docsBridge]!.a === graph.coreHub ? 0 : 1;
     signals.push({ edge: docsBridge, t0: start, dur, dir: edgeFrom[docsBridge] === 0 ? 1 : -1, strength: 1.5 });
     wakeFan(1, start + dur, 3, 0.22, start + dur + 0.6, 1.8, 0.9, DOC_NAMES);
-    events.push({ t: start, text: `${fmt(start)}  bridge → compatibility matrices` });
-    events.push({ t: start + dur + 0.3, text: `${fmt(start + dur + 0.3)}  cross-validating against canonical reference` });
-    labels.push({ node: docsRoot, t: start + dur, text: `Compatibility matrices · ${graph.nodes.filter((nd) => nd.cluster === 1 && nd.kind === 0).length} relations` });
+    events.push({ t: start, text: `${fmt(start)}  Cruza la respuesta con la matriz de compatibilidad técnica` });
+    events.push({ t: start + dur + 0.3, text: `${fmt(start + dur + 0.3)}  Verifica los datos contra la documentación técnica oficial` });
+    labels.push({ node: docsRoot, t: start + dur, text: `Matriz de compatibilidad · ${graph.nodes.filter((nd) => nd.cluster === 1 && nd.kind === 0).length} relaciones` });
   }
 
   // 9.6s: bridge to the long tail; its disc indexes in a spiral sweep 11.2-14s.
@@ -163,9 +175,9 @@ export function buildSchedule(graph: Graph, seed: number): Schedule {
     edgeFrom[tailBridge] = graph.edges[tailBridge]!.a === graph.coreHub ? 0 : 1;
     signals.push({ edge: tailBridge, t0: start, dur, dir: edgeFrom[tailBridge] === 0 ? 1 : -1, strength: 1.5 });
     nodeStart[tail.hub] = start + dur;
-    events.push({ t: start, text: `${fmt(start)}  bridge → configuration space` });
-    events.push({ t: start + dur + 0.2, text: `${fmt(start + dur + 0.2)}  searching the configuration space` });
-    labels.push({ node: tail.hub, t: start + dur, text: `Configurations · ${leavesOf(tail.hub).length} indexed` });
+    events.push({ t: start, text: `${fmt(start)}  Busca piezas y configuraciones relacionadas` });
+    events.push({ t: start + dur + 0.2, text: `${fmt(start + dur + 0.2)}  Explora miles de configuraciones posibles` });
+    labels.push({ node: tail.hub, t: start + dur, text: `Configuraciones · ${leavesOf(tail.hub).length} indexadas` });
     for (const leaf of leavesOf(tail.hub)) {
       const rank = graph.nodes[leaf]!.rank;
       const arrive = start + dur + 0.15 + rank * 2.7;
@@ -200,7 +212,7 @@ export function buildSchedule(graph: Graph, seed: number): Schedule {
   }
   if (stakesTimes.length) {
     const first = Math.min(...stakesTimes);
-    events.push({ t: first, text: `${fmt(first)}  ${stakesTimes.length} uncertain matches · routed to application engineer` });
+    events.push({ t: first, text: `${fmt(first)}  ${stakesTimes.length} casos con dudas se envían a un ingeniero item para revisarlos` });
   }
 
   // 11-18s: return traffic. Leaves answer back to their hub, hubs back to the root: many
@@ -225,10 +237,24 @@ export function buildSchedule(graph: Graph, seed: number): Schedule {
     signals.push({ edge: e.id, t0: 11.5 + i * 0.5 + rng.range(-0.1, 0.1), dur: 0.6, dir: edgeFrom[e.id] === 0 ? -1 : 1, strength: 0.6 });
   });
 
-  events.push({ t: 11.2, text: `${fmt(11.2)}  return traffic · ${spokes.slice(0, 14).length + heroHubs.length + 14} streams` });
-  events.push({ t: 13.4, text: `${fmt(13.4)}  streams converge · root` });
-  events.push({ t: ANSWER, text: `${fmt(ANSWER)}  validated part-number sequence · 1 answer` });
+  events.push({ t: 11.2, text: `${fmt(11.2)}  Reúne todo lo que encontró en cada familia de producto` });
+  events.push({ t: 13.4, text: `${fmt(13.4)}  Combina toda la información en una sola respuesta` });
+  events.push({ t: BASE_ANSWER, text: `${fmt(BASE_ANSWER)}  Entrega una respuesta validada al cliente` });
   events.sort((x, y) => x.t - y.t);
+
+  // Everything above is built in the base (unscaled) timeline; stretch it to TIME_SCALE now,
+  // in one place, so choreography, envelope, and log timestamps never drift apart.
+  for (const ev of events) ev.t *= TIME_SCALE;
+  for (const l of labels) l.t *= TIME_SCALE;
+  for (let i = 0; i < nodeStart.length; i++) nodeStart[i]! *= TIME_SCALE;
+  for (let i = 0; i < edgeStart.length; i++) {
+    edgeStart[i]! *= TIME_SCALE;
+    edgeDur[i]! *= TIME_SCALE;
+  }
+  for (const s of signals) {
+    s.t0 *= TIME_SCALE;
+    s.dur *= TIME_SCALE;
+  }
 
   return { events, labels, nodeStart, edgeStart, edgeDur, edgeFrom, signals };
 }
@@ -240,9 +266,12 @@ export function smoothstep(a: number, b: number, x: number): number {
 
 /** Global brightness envelope; keeps fading into the next loop so the reset is seamless. */
 export function envelope(t: number): number {
-  if (t < 17) return 1;
-  const a = 1 - smoothstep(17, 19.8, t) * 0.65;
-  const b = 1 - smoothstep(19.8, 23.2, t);
+  const t1 = 17 * TIME_SCALE;
+  const t2 = 19.8 * TIME_SCALE;
+  const t3 = 23.2 * TIME_SCALE;
+  if (t < t1) return 1;
+  const a = 1 - smoothstep(t1, t2, t) * 0.65;
+  const b = 1 - smoothstep(t2, t3, t);
   return a * b;
 }
 
