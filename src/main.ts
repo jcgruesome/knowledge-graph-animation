@@ -28,6 +28,8 @@ import {
 } from 'postprocessing';
 import { buildGraph, type Density } from './graph';
 import { getDictionary } from './i18n';
+import { loadBrandKit, type BrandKit } from './brandkit';
+import { DEFAULT_QUERIES } from './queries';
 import { ANSWER, buildSchedule, LAND, LOOP, edgeState, envelope, ignition, nodeActivation } from './schedule';
 import { NodeField } from './nodes';
 import { EdgeField } from './edges';
@@ -35,7 +37,7 @@ import { AgentSearch } from './agentSearch';
 import { SignalField } from './signals';
 import { ClusterFields, createBackdrop, createDust } from './atmosphere';
 import { CameraRig } from './cameraRig';
-import { haloColor, PALETTE, VIOLET_HALO } from './palette';
+import { haloColor, buildPalette, PALETTE, VIOLET_HALO } from './palette';
 import { LoopExporter } from './export';
 import { DEFAULT_TINT } from './signals';
 import { unfurl } from './motion';
@@ -43,7 +45,20 @@ import { SoundDesign } from './audio';
 import { VolumetricHazeEffect } from './volumetrics';
 import { OVERLAY_LAYER, TRAIL_LAYER, TrailAccumulator } from './trails';
 
-const SEED = 20260828;
+// A BrandKit (loaded via ?kit=<slug>) overrides locale, palette, queries, logo, and seed.
+// With no ?kit= param, the built-in ReshapeX defaults stand.
+const kitSlug = new URLSearchParams(location.search).get('kit');
+const kit: BrandKit | null = kitSlug ? await loadBrandKit(kitSlug) : null;
+const dict = getDictionary(kit?.locale ?? 'en');
+buildPalette(kit?.palette);
+const queries = kit?.queries ?? DEFAULT_QUERIES;
+const SEED = kit?.seed ?? 20260828;
+
+if (kit) {
+  document.documentElement.lang = kit.locale;
+  const logoEl = document.querySelector<HTMLImageElement>('.logo');
+  if (logoEl) logoEl.src = kit.logoPath;
+}
 
 // ---------------------------------------------------------------- scene
 const canvas = document.getElementById('scene');
@@ -63,8 +78,6 @@ const camera = rig.camera;
 const densityParam = Number(new URLSearchParams(location.search).get('density') ?? '1');
 const density: Density = densityParam === 2 ? 2 : densityParam === 3 ? 3 : 1;
 const graph = buildGraph(SEED, density);
-// `en` is the default dictionary until Task 3 wires kit-driven locale selection.
-const dict = getDictionary('en');
 const schedule = buildSchedule(graph, SEED, dict);
 
 // Flowers unfurl: leaves start as a bud inside their hub and spring out as the hub wakes.
@@ -380,12 +393,6 @@ const BEATS: Array<[number, string]> = [
   [ANSWER, dict.beats.answerValidated],
   [18, dict.beats.recede],
 ];
-// Module lines on the answer card. Illustrative module ids, not real part numbers.
-const ANSWER_MODULES: Array<Array<[string, string]>> = [
-  [['Tool changer', 'TC · 046'], ['Gripper', 'GR · 112'], ['Robot-side adapter', 'RA · 207']],
-  [['Tool changer', 'TC · 031'], ['Compliance device', 'CD · 088'], ['Utility coupler', 'UC · 014']],
-  [['Tool changer', 'TC · 052'], ['Vacuum end-effector', 'VE · 141'], ['Robot-side adapter', 'RA · 219']],
-];
 const GLYPHS = '0123456789ABCDEFGHKLMNPRSTUVWXYZ·-';
 /** Scramble a value toward its final text as decode goes 0 → 1. */
 function decodeText(value: string, decode: number, seed: number): string {
@@ -399,7 +406,8 @@ function decodeText(value: string, decode: number, seed: number): string {
 }
 const VOICE = dict.voice;
 // Quick Consult runs in seven languages; the inbound query rotates through them each loop.
-const QUERIES = [
+// Built-in ReshapeX default rotation, used whenever no BrandKit supplies its own queries.
+const DEFAULT_DEMO_QUERIES = [
   'customer query · UR10e · 12.5 kg · palletizing',
   'Kundenanfrage · KUKA KR 10 · 8 kg · Schweißen',
   'consulta · FANUC CRX-10iA · 10 kg · carga de máquinas',
@@ -408,6 +416,12 @@ const QUERIES = [
   '問い合わせ · Denso VS-087 · 7 kg · ピッキング',
   '咨询 · UR5e · 5 kg · 包装',
 ];
+// A BrandKit's queries drive the rotation when present; otherwise the built-in samples do.
+const QUERIES = queries.length > 0 ? queries.map((q) => q.question) : DEFAULT_DEMO_QUERIES;
+/** The matched answer for a query, from the loaded BrandKit; the dictionary's fallback otherwise. */
+function answerFor(query: string): string {
+  return queries.find((q) => q.question === query)?.answer ?? dict.hud.fallbackAnswer;
+}
 let voiceIndex = 0;
 let lastBeat = '';
 
@@ -521,22 +535,11 @@ function computeOverlay(t: number, w: number, h: number): OverlayState {
   const typeAge = t - (LAND - 2.0);
   const typed = typeAge < 0 ? 0 : Math.min(fullQuery.length, Math.floor(typeAge * 24));
   const queryOpacity = t < LAND - 2.0 ? 0 : t < 9.5 ? Math.min(1, typeAge * 3) : Math.max(0, 1 - (t - 9.5) * 1.4);
-  // Answer card decodes line by line after the answer leaves.
+  // Answer card decodes line by line after the answer leaves: the query, then its matched answer.
   const cardAge = t - ANSWER;
-  const parts = fullQuery.split(' · ').slice(1);
-  const [robot = '', payload = '', application = ''] = parts;
-  const modules = ANSWER_MODULES[lastLoop % ANSWER_MODULES.length]!;
-  // A sample query carries its own structure; a typed one is shown as asked.
-  const head = parts.length >= 3
-    ? [
-        { label: 'Robot', value: robot, decode: Math.min(1, Math.max(0, (cardAge - 0.35) / 0.5)) },
-        { label: 'Payload', value: payload, decode: Math.min(1, Math.max(0, (cardAge - 0.55) / 0.5)) },
-        { label: 'Application', value: application, decode: Math.min(1, Math.max(0, (cardAge - 0.75) / 0.5)) },
-      ]
-    : [{ label: dict.hud.consultaLabel, value: fullQuery, decode: Math.min(1, Math.max(0, (cardAge - 0.35) / 0.6)) }];
   const lines = [
-    ...head,
-    ...modules.map((m, i) => ({ label: m[0], value: m[1], decode: Math.min(1, Math.max(0, (cardAge - 1.0 - i * 0.28) / 0.7)) })),
+    { label: dict.hud.consultaLabel, value: fullQuery, decode: Math.min(1, Math.max(0, (cardAge - 0.35) / 0.6)) },
+    { label: dict.hud.respuestaLabel, value: answerFor(fullQuery), decode: Math.min(1, Math.max(0, (cardAge - 1.1) / 0.9)) },
   ];
   // The DOM keeps one row per line and never clears the ones it does not touch.
   while (lines.length < CARD_ROWS) lines.push({ label: '', value: '', decode: 0 });
