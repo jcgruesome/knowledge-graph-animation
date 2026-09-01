@@ -1,12 +1,18 @@
-import { smoothstep } from './schedule';
+import { LOOP, smoothstep, TIME_SCALE } from './schedule';
 
 /** Leaves rest in a tight bud at this fraction of the way from hub to final position. */
 export const BUD = 0.32;
 export const UNFURL_DUR = 1.15;
 
-/** 1 while the graph is open, folding back to 0 during the recede (17.4 → 19.6 s). */
+const FOLD_START = 17.4 * TIME_SCALE;
+const FOLD_END = 19.6 * TIME_SCALE;
+const ENV_T1 = 17 * TIME_SCALE;
+const ENV_T2 = 19.8 * TIME_SCALE;
+const ENV_T3 = 23.2 * TIME_SCALE;
+
+/** 1 while the graph is open, folding back to 0 during the recede. */
 export function foldFactor(t: number): number {
-  return smoothstep(19.6, 17.4, t);
+  return smoothstep(FOLD_END, FOLD_START, t);
 }
 
 /** Spring-damped ease with a little overshoot: the flower snaps open and settles. */
@@ -29,11 +35,11 @@ export function unfurl(start: number, t: number): number {
 
 /** GLSL twin of schedule.ts activation math so the GPU evaluates the choreography. */
 export const ACTIVATION_GLSL = /* glsl */ `
-  const float LOOP = 20.0;
+  const float LOOP = ${LOOP.toFixed(3)};
   float envelope(float t) {
-    if (t < 17.0) return 1.0;
-    float a = 1.0 - smoothstep(17.0, 19.8, t) * 0.65;
-    float b = 1.0 - smoothstep(19.8, 23.2, t);
+    if (t < ${ENV_T1.toFixed(3)}) return 1.0;
+    float a = 1.0 - smoothstep(${ENV_T1.toFixed(3)}, ${ENV_T2.toFixed(3)}, t) * 0.65;
+    float b = 1.0 - smoothstep(${ENV_T2.toFixed(3)}, ${ENV_T3.toFixed(3)}, t);
     return a * b;
   }
   float ignition(float age) {
@@ -67,7 +73,7 @@ export const ACTIVATION_GLSL = /* glsl */ `
 export const UNFURL_GLSL = /* glsl */ `
   const float BUD = ${BUD.toFixed(3)};
   const float UNFURL_DUR = ${UNFURL_DUR.toFixed(3)};
-  float foldFactor(float t) { return smoothstep(19.6, 17.4, t); }
+  float foldFactor(float t) { return smoothstep(${FOLD_END.toFixed(3)}, ${FOLD_START.toFixed(3)}, t); }
   float easeOutBack(float x) {
     float c1 = 1.70158; float c3 = c1 + 1.0; float y = x - 1.0;
     return 1.0 + c3 * y * y * y + c1 * y * y;

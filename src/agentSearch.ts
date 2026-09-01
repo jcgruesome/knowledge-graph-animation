@@ -100,7 +100,7 @@ export class AgentSearch {
     this.input.blur();
     this.input.disabled = true;
     this.syncSend();
-    this.caption.textContent = 'Routing…';
+    this.caption.textContent = 'Enviando…';
 
     const box = this.form.getBoundingClientRect();
     const from = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
@@ -132,7 +132,7 @@ export class AgentSearch {
       this.busy = false;
       this.input.disabled = false;
       this.input.value = '';
-      this.caption.textContent = 'Press enter to route the query';
+      this.caption.textContent = 'Presiona enter para enviar la consulta';
       this.root.classList.remove('launching');
       this.root.classList.add('open');
       this.syncSend();

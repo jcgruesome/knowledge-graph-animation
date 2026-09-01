@@ -27,10 +27,12 @@ import {
   BlendFunction,
 } from 'postprocessing';
 import { buildGraph, type Density } from './graph';
-import { ANSWER, buildSchedule, LAND, LOOP, edgeState, envelope, ignition, nodeActivation } from './schedule';
+import { ANSWER, buildSchedule, LAND, LOOP, TIME_SCALE, edgeState, envelope, ignition, nodeActivation } from './schedule';
 import { NodeField } from './nodes';
 import { EdgeField } from './edges';
 import { AgentSearch } from './agentSearch';
+import { QUERIES as SUPPORT_QUERIES } from './queries';
+import { startAutoplay } from './autoplay';
 import { SignalField } from './signals';
 import { ClusterFields, createBackdrop, createDust } from './atmosphere';
 import { CameraRig } from './cameraRig';
@@ -110,8 +112,8 @@ function nodeWorldPos(id: number, t: number, out: Vector3): Vector3 {
 
 // Heartbeats: waves from the root through the awake structure. The answer is the big one.
 const HEARTBEATS: Array<{ t: number; s: number }> = [
-  { t: 13.4, s: 0.55 },
-  { t: 15.0, s: 0.55 },
+  { t: 13.4 * TIME_SCALE, s: 0.55 },
+  { t: 15.0 * TIME_SCALE, s: 0.55 },
   { t: ANSWER, s: 1.0 },
 ];
 function heartbeatAt(t: number): { age: number; strength: number } {
@@ -284,12 +286,12 @@ const heroHubs = schedule.labels
   .map((l) => l.node);
 const FOCUS: Array<{ t: number; node: number }> = [
   { t: 0, node: graph.coreHub },
-  { t: 4.7, node: heroHubs[0] ?? graph.coreHub },
-  { t: 6.3, node: heroHubs[2] ?? graph.coreHub },
-  { t: 8.3, node: graph.coreHub },
-  { t: 9.6, node: graph.clusters[1]!.hub },
-  { t: 11.3, node: graph.clusters[2]!.hub },
-  { t: 13.3, node: graph.coreHub },
+  { t: 4.7 * TIME_SCALE, node: heroHubs[0] ?? graph.coreHub },
+  { t: 6.3 * TIME_SCALE, node: heroHubs[2] ?? graph.coreHub },
+  { t: 8.3 * TIME_SCALE, node: graph.coreHub },
+  { t: 9.6 * TIME_SCALE, node: graph.clusters[1]!.hub },
+  { t: 11.3 * TIME_SCALE, node: graph.clusters[2]!.hub },
+  { t: 13.3 * TIME_SCALE, node: graph.coreHub },
 ];
 let focusDistance = 110;
 const focusTmp = new Vector3();
@@ -367,23 +369,17 @@ const labelsEl = el('labels');
 const logEl = el('log');
 
 const BEATS: Array<[number, string]> = [
-  [0, 'Dormant field'],
-  [2, 'Customer query'],
-  [4, 'Grounding'],
-  [6.8, 'Tooling catalog resolves'],
-  [9.6, 'Cross-validation'],
-  [11.2, 'Configuration space'],
-  [13.4, 'Streams converge'],
-  [ANSWER, 'Validated part number'],
-  [18, 'Recede'],
+  [0, 'Campo en reposo'],
+  [2 * TIME_SCALE, 'Consulta del cliente'],
+  [4 * TIME_SCALE, 'Aterrizaje en el catálogo'],
+  [6.8 * TIME_SCALE, 'El catálogo resuelve'],
+  [9.6 * TIME_SCALE, 'Validación cruzada'],
+  [11.2 * TIME_SCALE, 'Espacio de configuración'],
+  [13.4 * TIME_SCALE, 'Los flujos convergen'],
+  [ANSWER, 'Respuesta validada'],
+  [18 * TIME_SCALE, 'Repliegue'],
 ];
-// Module lines on the answer card. Illustrative module ids, not real part numbers.
-const ANSWER_MODULES: Array<Array<[string, string]>> = [
-  [['Tool changer', 'TC · 046'], ['Gripper', 'GR · 112'], ['Robot-side adapter', 'RA · 207']],
-  [['Tool changer', 'TC · 031'], ['Compliance device', 'CD · 088'], ['Utility coupler', 'UC · 014']],
-  [['Tool changer', 'TC · 052'], ['Vacuum end-effector', 'VE · 141'], ['Robot-side adapter', 'RA · 219']],
-];
-const GLYPHS = '0123456789ABCDEFGHKLMNPRSTUVWXYZ·-';
+const GLYPHS = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ0123456789·-';
 /** Scramble a value toward its final text as decode goes 0 → 1. */
 function decodeText(value: string, decode: number, seed: number): string {
   const settled = Math.floor(value.length * decode);
@@ -395,21 +391,17 @@ function decodeText(value: string, decode: number, seed: number): string {
   return out;
 }
 const VOICE = [
-  'Signal becomes intelligence.',
-  'Millions of valid configurations. One validated answer.',
-  'Decades of pattern recognition, available to every customer.',
-  'Uncertain? It asks an engineer. It never guesses.',
+  'La señal se convierte en respuesta.',
+  'Miles de configuraciones posibles. Una respuesta validada.',
+  'Décadas de conocimiento técnico, disponibles para cada cliente.',
+  '¿Hay incertidumbre? Se consulta a un ingeniero. Nunca se adivina.',
 ];
-// Quick Consult runs in seven languages; the inbound query rotates through them each loop.
-const QUERIES = [
-  'customer query · UR10e · 12.5 kg · palletizing',
-  'Kundenanfrage · KUKA KR 10 · 8 kg · Schweißen',
-  'consulta · FANUC CRX-10iA · 10 kg · carga de máquinas',
-  'demande · ABB IRB 1300 · 7 kg · assemblage',
-  'richiesta · Yaskawa GP12 · 12 kg · pallettizzazione',
-  '問い合わせ · Denso VS-087 · 7 kg · ピッキング',
-  '咨询 · UR5e · 5 kg · 包装',
-];
+/** Real item24 support Q&A, cycled one per loop and auto-typed into the search field. */
+const QUERIES = SUPPORT_QUERIES.map((q) => q.question);
+const FALLBACK_ANSWER = 'Ruta validada. Sin coincidencia exacta en el set de demostración.';
+function answerFor(query: string): string {
+  return SUPPORT_QUERIES.find((q) => q.question === query)?.answer ?? FALLBACK_ANSWER;
+}
 let voiceIndex = 0;
 let lastBeat = '';
 
@@ -443,7 +435,7 @@ for (let i = 0; i < CARD_ROWS; i++) {
   cardEl.insertBefore(row, cardVerified);
   cardRows.push({ el: row, label, value });
 }
-const LOG_LINES = 7;
+const LOG_LINES = 11;
 const logLineEls: HTMLDivElement[] = [];
 for (let i = 0; i < LOG_LINES; i++) {
   const div = document.createElement('div');
@@ -512,7 +504,7 @@ function computeOverlay(t: number, w: number, h: number): OverlayState {
     const rank = shown.length - 1 - i;
     return {
       text: ev.text.replace('{QUERY}', activeQuery),
-      opacity: Math.max(0.25, 1 - rank * 0.13) * env * Math.min(1, (t - ev.t) / 0.25),
+      opacity: Math.max(0.4, 1 - rank * 0.06) * env * Math.min(1, (t - ev.t) / 0.25),
       answer: ev.t >= ANSWER,
     };
   });
@@ -522,23 +514,13 @@ function computeOverlay(t: number, w: number, h: number): OverlayState {
   const fullQuery = activeQuery;
   const typeAge = t - (LAND - 2.0);
   const typed = typeAge < 0 ? 0 : Math.min(fullQuery.length, Math.floor(typeAge * 24));
-  const queryOpacity = t < LAND - 2.0 ? 0 : t < 9.5 ? Math.min(1, typeAge * 3) : Math.max(0, 1 - (t - 9.5) * 1.4);
+  const HOLD = 9.5 * TIME_SCALE;
+  const queryOpacity = t < LAND - 2.0 ? 0 : t < HOLD ? Math.min(1, typeAge * 3) : Math.max(0, 1 - (t - HOLD) * 1.4);
   // Answer card decodes line by line after the answer leaves.
   const cardAge = t - ANSWER;
-  const parts = fullQuery.split(' · ').slice(1);
-  const [robot = '', payload = '', application = ''] = parts;
-  const modules = ANSWER_MODULES[lastLoop % ANSWER_MODULES.length]!;
-  // A sample query carries its own structure; a typed one is shown as asked.
-  const head = parts.length >= 3
-    ? [
-        { label: 'Robot', value: robot, decode: Math.min(1, Math.max(0, (cardAge - 0.35) / 0.5)) },
-        { label: 'Payload', value: payload, decode: Math.min(1, Math.max(0, (cardAge - 0.55) / 0.5)) },
-        { label: 'Application', value: application, decode: Math.min(1, Math.max(0, (cardAge - 0.75) / 0.5)) },
-      ]
-    : [{ label: 'Query', value: fullQuery, decode: Math.min(1, Math.max(0, (cardAge - 0.35) / 0.6)) }];
   const lines = [
-    ...head,
-    ...modules.map((m, i) => ({ label: m[0], value: m[1], decode: Math.min(1, Math.max(0, (cardAge - 1.0 - i * 0.28) / 0.7)) })),
+    { label: 'Consulta', value: fullQuery, decode: Math.min(1, Math.max(0, (cardAge - 0.35) / 0.6)) },
+    { label: 'Respuesta', value: answerFor(fullQuery), decode: Math.min(1, Math.max(0, (cardAge - 1.1) / 0.9)) },
   ];
   // The DOM keeps one row per line and never clears the ones it does not touch.
   while (lines.length < CARD_ROWS) lines.push({ label: '', value: '', decode: 0 });
@@ -557,7 +539,7 @@ function computeOverlay(t: number, w: number, h: number): OverlayState {
     logVisible: t >= LAND - 0.2 && env > 0.05,
     beat: rig.manual ? `${beat} · manual camera` : beat,
     voice: VOICE[voiceIndex] ?? '',
-    voiceVisible: t > 17.2 && t < 19.4,
+    voiceVisible: t > 17.2 * TIME_SCALE && t < 19.4 * TIME_SCALE,
     progress: t / LOOP,
   };
 }
@@ -599,28 +581,62 @@ function applyOverlayToDom(o: OverlayState): void {
   }
 }
 
+const reshapexLogoImage = new Image();
+reshapexLogoImage.src = '/reshapex-logo.svg';
 const logoImage = new Image();
-logoImage.src = '/reshapex-logo.svg';
+logoImage.src = '/item-logo.svg';
 
 /** Canvas twin of the DOM HUD, used for video export. */
+/** Greedy word-wrap for canvas text, using the context's current font to measure. */
+function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const words = text.split(' ');
+  const rows: string[] = [];
+  let cur = '';
+  for (const word of words) {
+    const attempt = cur ? `${cur} ${word}` : word;
+    if (cur && ctx.measureText(attempt).width > maxWidth) {
+      rows.push(cur);
+      cur = word;
+    } else {
+      cur = attempt;
+    }
+  }
+  if (cur) rows.push(cur);
+  return rows;
+}
+
 function drawOverlay(ctx: CanvasRenderingContext2D, w: number, h: number, o: OverlayState): void {
   const k = w / 1600;
-  const steel = 'rgba(139,154,173,';
+  const steel = 'rgba(112,112,112,';
   ctx.save();
   ctx.textBaseline = 'middle';
-  // Logo
+  // Brand lockup: ReshapeX × item
+  let logoX = 40 * k;
+  if (reshapexLogoImage.complete && reshapexLogoImage.naturalWidth > 0) {
+    const lh = 26 * k;
+    const lw = lh * (reshapexLogoImage.naturalWidth / reshapexLogoImage.naturalHeight);
+    ctx.globalAlpha = 0.92;
+    ctx.drawImage(reshapexLogoImage, logoX, 32 * k, lw, lh);
+    ctx.globalAlpha = 1;
+    logoX += lw + 14 * k;
+  }
+  ctx.font = `500 ${14 * k}px "Hanken Grotesk", system-ui, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = `${steel}0.6)`;
+  ctx.fillText('×', logoX, 45 * k);
+  logoX += ctx.measureText('×').width + 14 * k;
   if (logoImage.complete && logoImage.naturalWidth > 0) {
-    const lh = 22 * k;
+    const lh = 26 * k;
     const lw = lh * (logoImage.naturalWidth / logoImage.naturalHeight);
     ctx.globalAlpha = 0.92;
-    ctx.drawImage(logoImage, 40 * k, 32 * k, lw, lh);
+    ctx.drawImage(logoImage, logoX, 32 * k, lw, lh);
     ctx.globalAlpha = 1;
   }
-  ctx.font = `600 ${12 * k}px "Hanken Grotesk", system-ui, sans-serif`;
-  ctx.letterSpacing = `${0.12 * 12 * k}px`;
+  ctx.font = `600 ${15 * k}px "Hanken Grotesk", system-ui, sans-serif`;
+  ctx.letterSpacing = `${0.1 * 15 * k}px`;
   ctx.textAlign = 'right';
-  ctx.fillStyle = `${steel}0.55)`;
-  ctx.fillText(o.beat.toUpperCase(), w - 40 * k, 40 * k);
+  ctx.fillStyle = `${steel}0.6)`;
+  ctx.fillText(o.beat.toUpperCase(), w - 40 * k, 45 * k);
   // Labels
   ctx.textAlign = 'left';
   for (const l of o.labels) {
@@ -632,27 +648,36 @@ function drawOverlay(ctx: CanvasRenderingContext2D, w: number, h: number, o: Ove
     ctx.moveTo(l.x, l.y);
     ctx.lineTo(l.x + 10 * k, l.y);
     ctx.stroke();
-    ctx.font = `600 ${10 * k}px "Hanken Grotesk", system-ui, sans-serif`;
-    ctx.letterSpacing = `${0.12 * 10 * k}px`;
-    ctx.fillStyle = 'rgba(229,233,236,0.78)';
+    ctx.font = `600 ${13 * k}px "Hanken Grotesk", system-ui, sans-serif`;
+    ctx.letterSpacing = `${0.1 * 13 * k}px`;
+    ctx.fillStyle = 'rgba(247,247,247,0.78)';
     ctx.fillText(l.name.toUpperCase(), l.x + 14 * k, l.y);
     const nameW = ctx.measureText(l.name.toUpperCase()).width;
-    ctx.font = `500 ${10 * k}px "Hanken Grotesk", system-ui, sans-serif`;
+    ctx.font = `500 ${13 * k}px "Hanken Grotesk", system-ui, sans-serif`;
     ctx.fillStyle = `${steel}0.85)`;
     ctx.fillText(l.count.toUpperCase(), l.x + 14 * k + nameW + 6 * k, l.y);
   }
   ctx.globalAlpha = 1;
-  // Log
+  // Step-by-step process readout (replaces the old keyboard-shortcut hint space).
+  // Left-aligned and word-wrapped to match the DOM version, since a right-aligned
+  // ragged edge reads badly once lines wrap to more than one row.
   if (o.logVisible) {
-    ctx.textAlign = 'right';
-    ctx.font = `500 ${11 * k}px "Hanken Grotesk", system-ui, sans-serif`;
-    ctx.letterSpacing = `${0.04 * 11 * k}px`;
-    const lineH = 11 * 1.7 * k;
-    const baseY = h - 132 * k - lineH * (LOG_LINES - 0.5);
-    o.log.forEach((line, i) => {
+    ctx.textAlign = 'left';
+    ctx.font = `500 ${16 * k}px "Hanken Grotesk", system-ui, sans-serif`;
+    ctx.letterSpacing = `${0.01 * 16 * k}px`;
+    const lineH = 16 * 1.7 * k;
+    const logWidth = 440 * k;
+    const logX = w - 40 * k - logWidth;
+    const wrapped = o.log.map((line) => ({ ...line, rows: wrapCanvasText(ctx, line.text, logWidth) }));
+    const totalRows = wrapped.reduce((sum, line) => sum + line.rows.length, 0);
+    let y = h - 118 * k - lineH * (totalRows - 0.5);
+    wrapped.forEach((line) => {
       ctx.globalAlpha = line.opacity;
-      ctx.fillStyle = line.answer ? '#ffe500' : `${steel}0.85)`;
-      ctx.fillText(line.text, w - 40 * k, baseY + i * lineH);
+      ctx.fillStyle = line.answer ? `#${PALETTE.voltYellow.getHexString()}` : `${steel}0.85)`;
+      for (const row of line.rows) {
+        ctx.fillText(row, logX, y);
+        y += lineH;
+      }
     });
     ctx.globalAlpha = 1;
   }
@@ -660,34 +685,34 @@ function drawOverlay(ctx: CanvasRenderingContext2D, w: number, h: number, o: Ove
   if (o.queryOpacity > 0.01) {
     ctx.textAlign = 'left';
     ctx.globalAlpha = o.queryOpacity;
-    ctx.font = `500 ${13 * k}px "Hanken Grotesk", system-ui, sans-serif`;
-    ctx.letterSpacing = `${0.04 * 13 * k}px`;
-    ctx.fillStyle = 'rgba(229,233,236,0.85)';
+    ctx.font = `500 ${17 * k}px "Hanken Grotesk", system-ui, sans-serif`;
+    ctx.letterSpacing = `${0.02 * 17 * k}px`;
+    ctx.fillStyle = 'rgba(247,247,247,0.85)';
     ctx.fillText(o.query, 40 * k, h - 44 * k);
     ctx.globalAlpha = 1;
   }
   // Answer card
   if (o.card.visible) {
     ctx.textAlign = 'left';
-    const rowH = 20 * k;
+    const rowH = 24 * k;
     const x = 40 * k;
     let y = h - 96 * k - rowH * (o.card.lines.length + 1);
-    ctx.letterSpacing = `${0.12 * 10 * k}px`;
+    ctx.letterSpacing = `${0.1 * 13 * k}px`;
     o.card.lines.forEach((line, i) => {
       if (line.decode <= 0) return;
-      ctx.font = `600 ${10 * k}px "Hanken Grotesk", system-ui, sans-serif`;
+      ctx.font = `600 ${13 * k}px "Hanken Grotesk", system-ui, sans-serif`;
       ctx.fillStyle = `${steel}0.85)`;
       ctx.fillText(line.label.toUpperCase(), x, y);
-      ctx.font = `500 ${13 * k}px "Hanken Grotesk", system-ui, sans-serif`;
-      ctx.fillStyle = line.decode >= 1 ? 'rgba(229,233,236,0.95)' : `${steel}0.7)`;
+      ctx.font = `500 ${17 * k}px "Hanken Grotesk", system-ui, sans-serif`;
+      ctx.fillStyle = line.decode >= 1 ? 'rgba(247,247,247,0.95)' : `${steel}0.7)`;
       ctx.fillText(decodeText(line.value, line.decode, i), x + 150 * k, y);
       y += rowH;
     });
     if (o.card.verified > 0) {
       ctx.globalAlpha = o.card.verified;
-      ctx.font = `600 ${10 * k}px "Hanken Grotesk", system-ui, sans-serif`;
+      ctx.font = `600 ${13 * k}px "Hanken Grotesk", system-ui, sans-serif`;
       ctx.fillStyle = `#${PALETTE.electricGreen.getHexString()}`;
-      ctx.fillText('✓  VALIDATED AGAINST CANONICAL REFERENCE', x, y + 4 * k);
+      ctx.fillText('✓  VALIDADO CONTRA LA REFERENCIA TÉCNICA OFICIAL', x, y + 4 * k);
       ctx.globalAlpha = 1;
     }
   }
@@ -695,8 +720,8 @@ function drawOverlay(ctx: CanvasRenderingContext2D, w: number, h: number, o: Ove
   if (o.voiceVisible) {
     ctx.textAlign = 'left';
     ctx.letterSpacing = '0px';
-    ctx.font = `italic 400 ${22 * k}px "Newsreader", Georgia, serif`;
-    ctx.fillStyle = 'rgba(229,233,236,0.85)';
+    ctx.font = `italic 400 ${30 * k}px "Newsreader", Georgia, serif`;
+    ctx.fillStyle = 'rgba(247,247,247,0.85)';
     ctx.fillText(o.voice, 40 * k, h - 44 * k);
   }
   // Progress
@@ -783,7 +808,7 @@ function step(dt: number, outW = window.innerWidth, outH = window.innerHeight): 
   const rootAct = Math.max(nodeActivation(schedule.nodeStart[graph.coreHub]!, t), nodeAct[graph.coreHub]!);
 
   // Ambient life: single-leaf verification pings while the network is settled.
-  if (t > 12 && t < 17.4) {
+  if (t > 12 * TIME_SCALE && t < 17.4 * TIME_SCALE) {
     const slot = Math.floor(t * 3);
     const frac = t * 3 - slot;
     const hash = ((slot * 2654435761) >>> 0) % graph.nodes.length;
@@ -982,6 +1007,10 @@ const search = new AgentSearch({
   },
 });
 
+// Runs the demo hands-off: types each real support question into the field and submits it,
+// one full choreography loop apart so every query gets to land, resolve, and recede on its own.
+startAutoplay(SUPPORT_QUERIES, LOOP * 1000 - 8000);
+
 // ---------------------------------------------------------------- events
 // Camera: drag or arrow keys orbit, shift+drag / shift+arrows pan, wheel dollies. Any input
 // takes the camera over; a few idle seconds hand it back to the cinematic path.
@@ -1020,7 +1049,7 @@ window.addEventListener('pointermove', (ev) => {
 function unlockAudio(): void {
   if (sound.unlocked) return;
   sound.unlock();
-  soundHint.textContent = 'M mutes sound';
+  soundHint.textContent = 'M silencia el sonido';
 }
 window.addEventListener('pointerdown', (ev) => {
   unlockAudio();
@@ -1052,7 +1081,7 @@ window.addEventListener('keydown', (ev) => {
   if (search.typing) return;
   if (ev.key === 'm') {
     sound.setMuted(!sound.muted);
-    soundHint.textContent = sound.muted ? 'M unmutes sound' : 'M mutes sound';
+    soundHint.textContent = sound.muted ? 'M reactiva el sonido' : 'M silencia el sonido';
   }
   if (ev.code.startsWith('Arrow')) {
     ev.preventDefault();
