@@ -27,6 +27,7 @@ import {
   BlendFunction,
 } from 'postprocessing';
 import { buildGraph, type Density } from './graph';
+import { getDictionary } from './i18n';
 import { ANSWER, buildSchedule, LAND, LOOP, edgeState, envelope, ignition, nodeActivation } from './schedule';
 import { NodeField } from './nodes';
 import { EdgeField } from './edges';
@@ -62,7 +63,9 @@ const camera = rig.camera;
 const densityParam = Number(new URLSearchParams(location.search).get('density') ?? '1');
 const density: Density = densityParam === 2 ? 2 : densityParam === 3 ? 3 : 1;
 const graph = buildGraph(SEED, density);
-const schedule = buildSchedule(graph, SEED);
+// `en` is the default dictionary until Task 3 wires kit-driven locale selection.
+const dict = getDictionary('en');
+const schedule = buildSchedule(graph, SEED, dict);
 
 // Flowers unfurl: leaves start as a bud inside their hub and spring out as the hub wakes.
 // Hubs and roots are fixed (-Infinity); leaves of hubs that never wake stay buds (Infinity).
@@ -367,15 +370,15 @@ const labelsEl = el('labels');
 const logEl = el('log');
 
 const BEATS: Array<[number, string]> = [
-  [0, 'Dormant field'],
-  [2, 'Customer query'],
-  [4, 'Grounding'],
-  [6.8, 'Tooling catalog resolves'],
-  [9.6, 'Cross-validation'],
-  [11.2, 'Configuration space'],
-  [13.4, 'Streams converge'],
-  [ANSWER, 'Validated part number'],
-  [18, 'Recede'],
+  [0, dict.beats.dormant],
+  [2, dict.beats.customerQuery],
+  [4, dict.beats.grounding],
+  [6.8, dict.beats.catalogResolves],
+  [9.6, dict.beats.crossValidation],
+  [11.2, dict.beats.configSpace],
+  [13.4, dict.beats.streamsConverge],
+  [ANSWER, dict.beats.answerValidated],
+  [18, dict.beats.recede],
 ];
 // Module lines on the answer card. Illustrative module ids, not real part numbers.
 const ANSWER_MODULES: Array<Array<[string, string]>> = [
@@ -394,12 +397,7 @@ function decodeText(value: string, decode: number, seed: number): string {
   }
   return out;
 }
-const VOICE = [
-  'Signal becomes intelligence.',
-  'Millions of valid configurations. One validated answer.',
-  'Decades of pattern recognition, available to every customer.',
-  'Uncertain? It asks an engineer. It never guesses.',
-];
+const VOICE = dict.voice;
 // Quick Consult runs in seven languages; the inbound query rotates through them each loop.
 const QUERIES = [
   'customer query · UR10e · 12.5 kg · palletizing',
@@ -535,7 +533,7 @@ function computeOverlay(t: number, w: number, h: number): OverlayState {
         { label: 'Payload', value: payload, decode: Math.min(1, Math.max(0, (cardAge - 0.55) / 0.5)) },
         { label: 'Application', value: application, decode: Math.min(1, Math.max(0, (cardAge - 0.75) / 0.5)) },
       ]
-    : [{ label: 'Query', value: fullQuery, decode: Math.min(1, Math.max(0, (cardAge - 0.35) / 0.6)) }];
+    : [{ label: dict.hud.consultaLabel, value: fullQuery, decode: Math.min(1, Math.max(0, (cardAge - 0.35) / 0.6)) }];
   const lines = [
     ...head,
     ...modules.map((m, i) => ({ label: m[0], value: m[1], decode: Math.min(1, Math.max(0, (cardAge - 1.0 - i * 0.28) / 0.7)) })),
@@ -687,7 +685,7 @@ function drawOverlay(ctx: CanvasRenderingContext2D, w: number, h: number, o: Ove
       ctx.globalAlpha = o.card.verified;
       ctx.font = `600 ${10 * k}px "Hanken Grotesk", system-ui, sans-serif`;
       ctx.fillStyle = `#${PALETTE.electricGreen.getHexString()}`;
-      ctx.fillText('✓  VALIDATED AGAINST CANONICAL REFERENCE', x, y + 4 * k);
+      ctx.fillText(dict.hud.verified.toUpperCase(), x, y + 4 * k);
       ctx.globalAlpha = 1;
     }
   }
@@ -970,6 +968,7 @@ function handoffPoint(): { x: number; y: number } {
 const search = new AgentSearch({
   handoff: handoffPoint,
   flightSeconds: 2.0, // matches the scheduled inbound signal, LAND - 2.0 → LAND
+  captions: { default: dict.hud.caption, sending: dict.hud.captionSending },
   launch: (query) => {
     if (exporter.active) return;
     userQuery = query;
@@ -1020,7 +1019,7 @@ window.addEventListener('pointermove', (ev) => {
 function unlockAudio(): void {
   if (sound.unlocked) return;
   sound.unlock();
-  soundHint.textContent = 'M mutes sound';
+  soundHint.textContent = dict.hud.soundHintOn;
 }
 window.addEventListener('pointerdown', (ev) => {
   unlockAudio();
@@ -1052,7 +1051,7 @@ window.addEventListener('keydown', (ev) => {
   if (search.typing) return;
   if (ev.key === 'm') {
     sound.setMuted(!sound.muted);
-    soundHint.textContent = sound.muted ? 'M unmutes sound' : 'M mutes sound';
+    soundHint.textContent = sound.muted ? dict.hud.soundHintMuted : dict.hud.soundHintOn;
   }
   if (ev.code.startsWith('Arrow')) {
     ev.preventDefault();

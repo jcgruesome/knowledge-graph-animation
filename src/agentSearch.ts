@@ -16,6 +16,8 @@ export interface AgentSearchOptions {
   launch: (query: string) => void;
   /** How long the inbound signal flies, so the field reopens as the query lands. */
   flightSeconds: number;
+  /** Caption text: idle/default vs while the query is in flight. Defaults to English. */
+  captions?: { default: string; sending: string };
 }
 
 const COLLAPSE_MS = 340;
@@ -35,9 +37,11 @@ export class AgentSearch {
   private timers: number[] = [];
   private busy = false;
   private hadFocus = false;
+  private readonly captions: { default: string; sending: string };
 
   constructor(opts: AgentSearchOptions) {
     this.opts = opts;
+    this.captions = opts.captions ?? { default: 'Press enter to route the query', sending: 'Routing…' };
     this.root = must('search');
     this.form = must('search-form') as HTMLFormElement;
     this.input = must('search-input') as HTMLInputElement;
@@ -100,7 +104,7 @@ export class AgentSearch {
     this.input.blur();
     this.input.disabled = true;
     this.syncSend();
-    this.caption.textContent = 'Routing…';
+    this.caption.textContent = this.captions.sending;
 
     const box = this.form.getBoundingClientRect();
     const from = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
@@ -132,7 +136,7 @@ export class AgentSearch {
       this.busy = false;
       this.input.disabled = false;
       this.input.value = '';
-      this.caption.textContent = 'Press enter to route the query';
+      this.caption.textContent = this.captions.default;
       this.root.classList.remove('launching');
       this.root.classList.add('open');
       this.syncSend();
