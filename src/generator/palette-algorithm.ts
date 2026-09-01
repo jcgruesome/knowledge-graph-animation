@@ -62,7 +62,7 @@ export function deriveGraphPalette(brandHex: string): GraphPalette {
   const usedFallback = raw.s < 0.08 || raw.l < 0.1 || raw.l > 0.9;
   const anchor: Hsl = usedFallback ? { h: FALLBACK_HUE, s: 0.75, l: 0.48 } : raw;
 
-  const brand = usedFallback ? hslToHex(anchor) : brandHex;
+  const brand = (usedFallback ? hslToHex(anchor) : brandHex).toLowerCase();
   const clusterA = hslToHex({ h: normHue(anchor.h + 25), s: anchor.s, l: anchor.l });
   const clusterB = hslToHex({ h: normHue(anchor.h - 20), s: anchor.s, l: clamp01(anchor.l * 0.65) });
   const stakes = hslToHex({ h: normHue(anchor.h + (330 - anchor.h > 180 ? -30 : 30)), s: Math.max(anchor.s, 0.7), l: anchor.l });
