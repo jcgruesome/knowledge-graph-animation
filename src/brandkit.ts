@@ -14,6 +14,12 @@ export interface BrandKit {
   logoPath: string;
   palette: GraphPalette;
   catalogNames: string[];
+  /**
+   * Optional override for the documents cluster's hub names. Omitted by the generator today,
+   * so a kit falls back to the dictionary's `docNames` — which are deliberately distinct from
+   * `catalogNames` so the two clusters never display the same labels.
+   */
+  docNames?: string[];
   queries: SupportQuery[];
   seed: number;
   generatedAt: string;

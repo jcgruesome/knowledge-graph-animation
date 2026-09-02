@@ -49,5 +49,21 @@ export const en: Dictionary = {
     combineIntoAnswer: 'Combines everything into a single answer',
     deliverAnswer: 'Delivers a validated answer to the customer',
   },
-  catalogNames: ['Category A', 'Category B', 'Category C', 'Category D', 'Category E', 'Category F', 'Category G', 'Category H'],
+  labels: {
+    catalogRoot: 'Tooling catalog · {count} part numbers',
+    docsRoot: 'Compatibility matrices · {count} relations',
+    configRoot: 'Configurations · {count} indexed',
+    hub: '{name} · {count} modules',
+  },
+  catalogNames: [
+    'Tool changers',
+    'Grippers',
+    'Compliance devices',
+    'Force/torque sensors',
+    'Vacuum end-effectors',
+    'Robot-side adapters',
+    'Collision sensors',
+    'Utility couplers',
+  ],
+  docNames: ['Adapter relations', 'Interface specs', 'Payload limits'],
 };

@@ -49,5 +49,17 @@ export interface Dictionary {
     combineIntoAnswer: string;
     deliverAnswer: string;
   };
-  catalogNames: string[]; // fallback generic category labels when a BrandKit supplies none
+  /** In-scene region labels — the largest text in the 3D frame. */
+  labels: {
+    /** {count} — the catalog cluster's root */
+    catalogRoot: string;
+    /** {count} — the documents cluster's root */
+    docsRoot: string;
+    /** {count} — the long-tail configuration disc's root */
+    configRoot: string;
+    /** {name}, {count} — one catalog/documents hub */
+    hub: string;
+  };
+  catalogNames: string[]; // catalog-cluster hub names; a BrandKit overrides these
+  docNames: string[]; // documents-cluster hub names; kept distinct so the two clusters never collide
 }

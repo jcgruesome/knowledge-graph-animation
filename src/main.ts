@@ -51,11 +51,10 @@ const kit: BrandKit | null = kitSlug ? await loadBrandKit(kitSlug) : null;
 const dict = getDictionary(kit?.locale ?? 'en');
 buildPalette(kit?.palette);
 syncDefaultTint(); // DEFAULT_TINT is captured at signals.ts import time; re-derive it post-override.
-const queries = kit?.queries ?? DEFAULT_QUERIES;
+const queries = kit?.queries?.length ? kit.queries : DEFAULT_QUERIES;
 const SEED = kit?.seed ?? 20260828;
 
 if (kit) {
-  document.documentElement.lang = kit.locale;
   const logoEl = document.querySelector<HTMLImageElement>('.logo');
   if (logoEl) logoEl.src = kit.logoPath;
 }
@@ -78,7 +77,13 @@ const camera = rig.camera;
 const densityParam = Number(new URLSearchParams(location.search).get('density') ?? '1');
 const density: Density = densityParam === 2 ? 2 : densityParam === 3 ? 3 : 1;
 const graph = buildGraph(SEED, density);
-const effectiveDict = kit?.catalogNames?.length ? { ...dict, catalogNames: kit.catalogNames } : dict;
+// A kit overrides the cluster hub names it actually supplies; anything it omits (or supplies
+// empty) falls back to the dictionary's built-in ReshapeX defaults.
+const effectiveDict = {
+  ...dict,
+  ...(kit?.catalogNames?.length ? { catalogNames: kit.catalogNames } : {}),
+  ...(kit?.docNames?.length ? { docNames: kit.docNames } : {}),
+};
 const schedule = buildSchedule(graph, SEED, effectiveDict);
 
 // Flowers unfurl: leaves start as a bud inside their hub and spring out as the hub wakes.
@@ -383,6 +388,24 @@ const progressEl = el('progress');
 const labelsEl = el('labels');
 const logEl = el('log');
 
+// index.html ships the English copy as static markup with no build-time templating, so the
+// resolved dictionary (a kit's locale, or `en` by default) is applied over it here. This is
+// the single place static chrome is localized — there is no separate `?locale=` bootstrap.
+{
+  document.documentElement.lang = dict.locale;
+  document.title = `ReshapeX · ${dict.hud.title}`;
+  const searchInput = el('search-input') as HTMLInputElement;
+  searchInput.placeholder = dict.hud.searchPlaceholder;
+  searchInput.setAttribute('aria-label', dict.hud.searchAriaLabel);
+  el('search-send').setAttribute('aria-label', dict.hud.sendAriaLabel);
+  el('search-caption').textContent = dict.hud.caption;
+  el('sound-hint').textContent = dict.hud.soundHint;
+  el('controls-hint').textContent = dict.hud.controlsHint;
+  el('card-verified').textContent = dict.hud.verified;
+  beatEl.textContent = dict.beats.dormant;
+  voiceEl.textContent = dict.voice[0] ?? '';
+}
+
 const BEATS: Array<[number, string]> = [
   [0, dict.beats.dormant],
   [2, dict.beats.customerQuery],
@@ -406,19 +429,9 @@ function decodeText(value: string, decode: number, seed: number): string {
   return out;
 }
 const VOICE = dict.voice;
-// Quick Consult runs in seven languages; the inbound query rotates through them each loop.
-// Built-in ReshapeX default rotation, used whenever no BrandKit supplies its own queries.
-const DEFAULT_DEMO_QUERIES = [
-  'customer query · UR10e · 12.5 kg · palletizing',
-  'Kundenanfrage · KUKA KR 10 · 8 kg · Schweißen',
-  'consulta · FANUC CRX-10iA · 10 kg · carga de máquinas',
-  'demande · ABB IRB 1300 · 7 kg · assemblage',
-  'richiesta · Yaskawa GP12 · 12 kg · pallettizzazione',
-  '問い合わせ · Denso VS-087 · 7 kg · ピッキング',
-  '咨询 · UR5e · 5 kg · 包装',
-];
-// A BrandKit's queries drive the rotation when present; otherwise the built-in samples do.
-const QUERIES = queries.length > 0 ? queries.map((q) => q.question) : DEFAULT_DEMO_QUERIES;
+// A BrandKit's queries drive the inbound rotation when present; otherwise the built-in
+// ReshapeX sample rotation in queries.ts does (which runs in seven languages, one per loop).
+const QUERIES = queries.map((q) => q.question);
 /** The matched answer for a query, from the loaded BrandKit; the dictionary's fallback otherwise. */
 function answerFor(query: string): string {
   return queries.find((q) => q.question === query)?.answer ?? dict.hud.fallbackAnswer;

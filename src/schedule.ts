@@ -60,7 +60,7 @@ export function buildSchedule(graph: Graph, seed: number, dict: Dictionary): Sch
   const labels: Label[] = [];
   const p = graph.positions;
   const CATALOG_NAMES = dict.catalogNames;
-  const DOC_NAMES = dict.catalogNames;
+  const DOC_NAMES = dict.docNames;
   const fmt = (t: number): string => t.toFixed(2).padStart(5, '0');
 
   const len = (eid: number): number => {
@@ -117,7 +117,7 @@ export function buildSchedule(graph: Graph, seed: number, dict: Dictionary): Sch
         bloom(hub, start + dur, 0.8, keep);
         const name = names[i] ?? `Hub ${hub}`;
         const count = leafCount(hub);
-        labels.push({ node: hub, t: start + dur, text: `${name} · ${count} modules` });
+        labels.push({ node: hub, t: start + dur, text: format(dict.labels.hub, { name, count }) });
         events.push({ t: start + dur, text: `${fmt(start + dur)}  ${format(dict.events.familyFound, { name: name.toLowerCase(), count })}` });
       });
     // Radial sweep by azimuth around the root.
@@ -139,7 +139,11 @@ export function buildSchedule(graph: Graph, seed: number, dict: Dictionary): Sch
   wakeFan(0, LAND, 6, 0.32, 6.8, 3.6, 0.92, CATALOG_NAMES);
   events.push({ t: LAND - 2.0, text: `${fmt(LAND - 2.0)}  ${dict.events.customerAsks}` });
   events.push({ t: LAND, text: `${fmt(LAND)}  ${dict.events.queryLanded}` });
-  labels.push({ node: graph.coreHub, t: LAND, text: `Tooling catalog · ${graph.nodes.filter((nd) => nd.cluster === 0 && nd.kind === 0).length} part numbers` });
+  labels.push({
+    node: graph.coreHub,
+    t: LAND,
+    text: format(dict.labels.catalogRoot, { count: graph.nodes.filter((nd) => nd.cluster === 0 && nd.kind === 0).length }),
+  });
 
   // 8.4s: hero bridge to the documents system; it wakes 10-12.5s.
   const docsBridge = graph.bridges[0]!;
@@ -154,7 +158,11 @@ export function buildSchedule(graph: Graph, seed: number, dict: Dictionary): Sch
     wakeFan(1, start + dur, 3, 0.22, start + dur + 0.6, 1.8, 0.9, DOC_NAMES);
     events.push({ t: start, text: `${fmt(start)}  ${dict.events.crossReference}` });
     events.push({ t: start + dur + 0.3, text: `${fmt(start + dur + 0.3)}  ${dict.events.verifyOfficialDocs}` });
-    labels.push({ node: docsRoot, t: start + dur, text: `Compatibility matrices · ${graph.nodes.filter((nd) => nd.cluster === 1 && nd.kind === 0).length} relations` });
+    labels.push({
+      node: docsRoot,
+      t: start + dur,
+      text: format(dict.labels.docsRoot, { count: graph.nodes.filter((nd) => nd.cluster === 1 && nd.kind === 0).length }),
+    });
   }
 
   // 9.6s: bridge to the long tail; its disc indexes in a spiral sweep 11.2-14s.
@@ -170,7 +178,7 @@ export function buildSchedule(graph: Graph, seed: number, dict: Dictionary): Sch
     nodeStart[tail.hub] = start + dur;
     events.push({ t: start, text: `${fmt(start)}  ${dict.events.searchRelatedParts}` });
     events.push({ t: start + dur + 0.2, text: `${fmt(start + dur + 0.2)}  ${dict.events.exploreConfigurations}` });
-    labels.push({ node: tail.hub, t: start + dur, text: `Configurations · ${leavesOf(tail.hub).length} indexed` });
+    labels.push({ node: tail.hub, t: start + dur, text: format(dict.labels.configRoot, { count: leavesOf(tail.hub).length }) });
     for (const leaf of leavesOf(tail.hub)) {
       const rank = graph.nodes[leaf]!.rank;
       const arrive = start + dur + 0.15 + rank * 2.7;

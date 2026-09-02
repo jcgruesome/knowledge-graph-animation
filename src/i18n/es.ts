@@ -60,6 +60,22 @@ export const es: Dictionary = {
     combineIntoAnswer: 'Combina toda la información en una sola respuesta',
     deliverAnswer: 'Entrega una respuesta validada al cliente',
   },
-  // Generic fallback, not item24's real catalog names — mirrors en.ts's "Category A".."H".
-  catalogNames: ['Categoría A', 'Categoría B', 'Categoría C', 'Categoría D', 'Categoría E', 'Categoría F', 'Categoría G', 'Categoría H'],
+  labels: {
+    catalogRoot: 'Catálogo de herramientas · {count} referencias',
+    docsRoot: 'Matrices de compatibilidad · {count} relaciones',
+    configRoot: 'Configuraciones · {count} indexadas',
+    hub: '{name} · {count} módulos',
+  },
+  // Spanish rendering of the built-in ReshapeX default catalog; a BrandKit overrides these.
+  catalogNames: [
+    'Cambiadores de herramienta',
+    'Pinzas',
+    'Dispositivos de compliancia',
+    'Sensores de fuerza/par',
+    'Efectores de vacío',
+    'Adaptadores de robot',
+    'Sensores de colisión',
+    'Acopladores de servicios',
+  ],
+  docNames: ['Relaciones de adaptadores', 'Especificaciones de interfaz', 'Límites de carga'],
 };
