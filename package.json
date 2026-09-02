@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && pnpm typecheck:tools && vite build",
+    "typecheck:tools": "tsc --noEmit -p tsconfig.tools.json",
     "preview": "vite preview",
     "test": "vitest run"
   },
@@ -15,6 +16,7 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
+    "@types/node": "^26.4.0",
     "@types/three": "^0.185.4",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
