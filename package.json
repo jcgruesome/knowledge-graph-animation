@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && pnpm typecheck:tools && vite build",
     "typecheck:tools": "tsc --noEmit -p tsconfig.tools.json",
+    "generate-demo": "tsx tools/generate-demo/cli.ts",
     "preview": "vite preview",
     "test": "vitest run"
   },
@@ -18,6 +19,8 @@
   "devDependencies": {
     "@types/node": "^26.4.0",
     "@types/three": "^0.185.4",
+    "commander": "^15.0.0",
+    "tsx": "^4.23.13",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
     "vitest": "^4.1.11"

@@ -78,7 +78,8 @@ const camera = rig.camera;
 const densityParam = Number(new URLSearchParams(location.search).get('density') ?? '1');
 const density: Density = densityParam === 2 ? 2 : densityParam === 3 ? 3 : 1;
 const graph = buildGraph(SEED, density);
-const schedule = buildSchedule(graph, SEED, dict);
+const effectiveDict = kit?.catalogNames?.length ? { ...dict, catalogNames: kit.catalogNames } : dict;
+const schedule = buildSchedule(graph, SEED, effectiveDict);
 
 // Flowers unfurl: leaves start as a bud inside their hub and spring out as the hub wakes.
 // Hubs and roots are fixed (-Infinity); leaves of hubs that never wake stay buds (Infinity).
