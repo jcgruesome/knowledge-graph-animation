@@ -20,9 +20,26 @@ program
 program.parse();
 const opts = program.opts<{ url: string; company: string; locale: string; density: string; seedVariant: string; baseUrl: string }>();
 
+/** Everything checkable from the arguments alone, checked before any network or paid API call. */
+function validateOptions(): { seedVariant: number; density: 1 | 2 | 3 } {
+  if (opts.locale !== 'auto' && opts.locale !== 'es' && opts.locale !== 'en') {
+    throw new Error(`--locale must be one of "es", "en", "auto" (got "${opts.locale}")`);
+  }
+  const seedVariant = Number(opts.seedVariant);
+  if (!Number.isInteger(seedVariant)) {
+    throw new Error(`--seed-variant must be an integer (got "${opts.seedVariant}")`);
+  }
+  const density = Number(opts.density);
+  if (density !== 1 && density !== 2 && density !== 3) {
+    throw new Error(`--density must be 1, 2 or 3 (got "${opts.density}")`);
+  }
+  return { seedVariant, density };
+}
+
 async function main(): Promise<void> {
+  const { seedVariant, density } = validateOptions();
   const slug = companyToSlug(opts.company);
-  const seed = companyToSeed(opts.company, Number(opts.seedVariant));
+  const seed = companyToSeed(opts.company, seedVariant);
 
   console.log(`[1/8] Scraping ${opts.url}...`);
   const scraped = await scrapeProspect(opts.url);
@@ -32,14 +49,13 @@ async function main(): Promise<void> {
   const generated = await generateContent(scraped.pages, { locale, company: opts.company });
 
   console.log('[3/8] Applying grounding gate...');
-  const queries = applyGroundingGate(
-    generated.queries.map((r) => ({ item: r.item, confidence: r.confidence })),
-    { minSurvivors: 8 },
-  ).map((q, i) => ({ ...q, confidence: generated.queries[i]!.confidence }));
-  const catalogNames = applyGroundingGate(
-    generated.categories.map((r) => ({ item: r.item, confidence: r.confidence })),
-    { minSurvivors: 5 },
-  );
+  // The gate returns the surviving RatedItems, so each survivor carries its own confidence —
+  // indexing back into the unfiltered array would mis-pair them as soon as anything is dropped.
+  const queries = applyGroundingGate(generated.queries, { minSurvivors: 8 }).map((r) => ({
+    ...r.item,
+    confidence: r.confidence,
+  }));
+  const catalogNames = applyGroundingGate(generated.categories, { minSurvivors: 5 }).map((r) => r.item);
 
   console.log('[4/8] Deriving palette...');
   const palette = deriveGraphPalette(scraped.brandColorHex);
@@ -78,13 +94,13 @@ async function main(): Promise<void> {
   console.log(`[7/8] Rendering demo video against ${opts.baseUrl} (replays a full ~20s animation loop; usually finishes in under a minute. If it's taking much longer, GPU acceleration may have failed to engage in headless Chromium)...`);
   mkdirSync('dist-demos', { recursive: true });
   const outPath = `dist-demos/${slug}.mp4`;
-  await renderKit({ baseUrl: opts.baseUrl, slug, outPath });
+  await renderKit({ baseUrl: opts.baseUrl, slug, outPath, density });
 
   console.log(`\nDemo video written: ${outPath}`);
   console.log(`Draft kit written: public/kits/${slug}.json`);
 
   console.log('[8/8] Deploying preview...');
-  const previewUrl = await deployPreview();
+  const previewUrl = await deployPreview(slug);
   console.log(`\nPreview: ${previewUrl}`);
   console.log(`MP4: ${outPath}`);
   console.log(`To promote to a stable URL: pnpm promote-demo ${slug} --project <name>`);

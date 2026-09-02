@@ -8,12 +8,23 @@ describe('applyGroundingGate', () => {
       { item: 'b', confidence: 0.5 },
       { item: 'c', confidence: 0.61 },
     ];
-    expect(applyGroundingGate(items, { minSurvivors: 2 })).toEqual(['a', 'c']);
+    expect(applyGroundingGate(items, { minSurvivors: 2 })).toEqual([
+      { item: 'a', confidence: 0.9 },
+      { item: 'c', confidence: 0.61 },
+    ]);
   });
 
   it('defaults the threshold to 0.6', () => {
     const items = [{ item: 'a', confidence: 0.6 }, { item: 'b', confidence: 0.59 }];
-    expect(applyGroundingGate(items, { minSurvivors: 1 })).toEqual(['a']);
+    expect(applyGroundingGate(items, { minSurvivors: 1 })).toEqual([{ item: 'a', confidence: 0.6 }]);
+  });
+
+  it('keeps each survivor paired with its own confidence after a drop shifts indices', () => {
+    const items = [
+      { item: 'dropped', confidence: 0.1 },
+      { item: 'kept', confidence: 0.95 },
+    ];
+    expect(applyGroundingGate(items, { minSurvivors: 1 })).toEqual([{ item: 'kept', confidence: 0.95 }]);
   });
 
   it('throws GroundingGateError when too few survive', () => {
