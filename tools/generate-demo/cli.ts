@@ -55,7 +55,13 @@ async function main(): Promise<void> {
     ...r.item,
     confidence: r.confidence,
   }));
-  const catalogNames = applyGroundingGate(generated.categories, { minSurvivors: 5 }).map((r) => r.item);
+  const allCategories = applyGroundingGate(generated.categories, { minSurvivors: 5 }).map((r) => r.item);
+  // Split the grounded categories into two non-overlapping groups so the catalog and documents
+  // clusters never show the same labels — both groups are still the prospect's own real
+  // categories (never the dictionary's ReshapeX-flavored fallback names).
+  const docCount = Math.min(3, Math.max(1, Math.floor(allCategories.length / 3)));
+  const catalogNames = allCategories.slice(0, allCategories.length - docCount);
+  const docNames = allCategories.slice(allCategories.length - docCount);
 
   console.log('[4/8] Deriving palette...');
   const palette = deriveGraphPalette(scraped.brandColorHex);
@@ -71,6 +77,7 @@ async function main(): Promise<void> {
     logoPath,
     palette,
     catalogNames,
+    docNames,
     queries,
     seed,
     generatedAt: new Date().toISOString(),
@@ -89,7 +96,7 @@ async function main(): Promise<void> {
   writeFileSync(`public/kits/${slug}.json`, JSON.stringify(kit, null, 2));
 
   console.log(`\nDraft kit written: public/kits/${slug}.json`);
-  console.log(`Dropped ${generated.queries.length - queries.length} low-confidence Q&A, ${generated.categories.length - catalogNames.length} low-confidence categories.`);
+  console.log(`Dropped ${generated.queries.length - queries.length} low-confidence Q&A, ${generated.categories.length - allCategories.length} low-confidence categories.`);
 
   console.log(`[7/8] Rendering demo video against ${opts.baseUrl} (replays a full ~20s animation loop; usually finishes in under a minute. If it's taking much longer, GPU acceleration may have failed to engage in headless Chromium)...`);
   mkdirSync('dist-demos', { recursive: true });
