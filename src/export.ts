@@ -25,6 +25,9 @@ export interface ExporterHooks {
 export class LoopExporter {
   active = false;
 
+  /** Resolvers for any in-flight `startAndAwaitBlob()` calls, fulfilled when recording stops. */
+  private pendingBlobResolvers: Array<(blob: Blob) => void> = [];
+
   constructor(
     private readonly renderer: WebGLRenderer,
     private readonly composer: EffectComposer,
@@ -32,6 +35,22 @@ export class LoopExporter {
     private readonly glCanvas: HTMLCanvasElement,
     private readonly hooks: ExporterHooks,
   ) {}
+
+  /**
+   * Same recording as `start()`, but returns a Promise that resolves with the recorded Blob
+   * once the loop finishes, instead of only relying on the `<a download>` side effect. Used by
+   * the headless automation hook (`window.kg.exportLoop()`); the browser download still fires.
+   */
+  startAndAwaitBlob(): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      if (this.active) {
+        reject(new Error('LoopExporter is already recording'));
+        return;
+      }
+      this.pendingBlobResolvers.push(resolve);
+      this.start();
+    });
+  }
 
   start(): void {
     if (this.active) return;
@@ -81,6 +100,9 @@ export class LoopExporter {
       restore();
       this.hooks.onStatus(`exported ${(blob.size / 1e6).toFixed(1)} MB`);
       setTimeout(() => this.hooks.onStatus(''), 4000);
+      const resolvers = this.pendingBlobResolvers;
+      this.pendingBlobResolvers = [];
+      for (const resolve of resolvers) resolve(blob);
     };
 
     this.hooks.begin();

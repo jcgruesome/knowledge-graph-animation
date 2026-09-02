@@ -1106,7 +1106,13 @@ window.addEventListener('resize', () => {
 // Debug / capture hooks: seek the loop clock and pause.
 declare global {
   interface Window {
-    kg: { seek: (t: number) => void; pause: (p: boolean) => void; debug: { renderer: WebGLRenderer; edges: Mesh } };
+    kg: {
+      seek: (t: number) => void;
+      pause: (p: boolean) => void;
+      debug: { renderer: WebGLRenderer; edges: Mesh };
+      /** Triggers the same recording as the `E` key, headlessly. Resolves once one full loop is recorded. */
+      exportLoop: () => Promise<Blob>;
+    };
   }
 }
 window.kg = {
@@ -1117,6 +1123,7 @@ window.kg = {
     paused = p;
   },
   debug: { renderer, edges: edges.mesh },
+  exportLoop: () => exporter.startAndAwaitBlob(),
 };
 
 requestAnimationFrame(() => hud.classList.add('visible'));
