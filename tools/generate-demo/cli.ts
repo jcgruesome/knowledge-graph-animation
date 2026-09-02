@@ -42,18 +42,9 @@ async function main(): Promise<void> {
   const palette = deriveGraphPalette(scraped.brandColorHex);
   if (palette.usedFallback) console.warn(`  ⚠ brand color ${scraped.brandColorHex} needed the fallback hue — consider reviewing manually.`);
 
-  console.log('[5/6] Downloading logo...');
-  mkdirSync(`public/kits/${slug}`, { recursive: true });
+  console.log('[5/6] Assembling BrandKit...');
   const logoExt = scraped.logoUrl?.split('.').pop() ?? 'svg';
   const logoPath = `/kits/${slug}/logo.${logoExt}`;
-  if (scraped.logoUrl) {
-    const res = await fetch(scraped.logoUrl);
-    writeFileSync(`public${logoPath}`, Buffer.from(await res.arrayBuffer()));
-  } else {
-    console.warn('  ⚠ no logo found — kit will reference a missing logo path; supply one manually.');
-  }
-
-  console.log('[6/6] Writing BrandKit...');
   const kit: BrandKit = {
     company: opts.company,
     slug,
@@ -66,7 +57,16 @@ async function main(): Promise<void> {
     generatedAt: new Date().toISOString(),
     sourceUrl: opts.url,
   };
-  parseBrandKit(kit); // throws before writing if the assembled object is malformed
+  parseBrandKit(kit); // throws before any filesystem writes if the assembled object is malformed
+
+  console.log('[6/6] Writing BrandKit and downloading logo...');
+  mkdirSync(`public/kits/${slug}`, { recursive: true });
+  if (scraped.logoUrl) {
+    const res = await fetch(scraped.logoUrl);
+    writeFileSync(`public${logoPath}`, Buffer.from(await res.arrayBuffer()));
+  } else {
+    console.warn('  ⚠ no logo found — kit will reference a missing logo path; supply one manually.');
+  }
   writeFileSync(`public/kits/${slug}.json`, JSON.stringify(kit, null, 2));
 
   console.log(`\nDraft kit written: public/kits/${slug}.json`);
