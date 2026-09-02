@@ -35,6 +35,36 @@ describe('extractBrandColorFromHtml', () => {
     const html = `<html><body><p>No colors here</p></body></html>`;
     expect(extractBrandColorFromHtml(html)).toMatch(/^#[0-9a-fA-F]{6}$/);
   });
+
+  it('does not double-count a CTA that sets both background-color and shorthand background', () => {
+    // A single element should only ever contribute one CTA-background score
+    // (mirroring upstream's single resolved getComputedStyle().backgroundColor
+    // per element): background-color wins when present, and the shorthand
+    // background is never also scored for that same element.
+    //
+    // The first CTA declares both properties with different colors; the
+    // second CTA declares only background-color, agreeing with the first
+    // CTA's shorthand color. This is what makes the two behaviors diverge:
+    //   - Buggy (double-counts the shorthand): #FF6600 gets 3 (tag 1's
+    //     shorthand) + 3 (tag 2's background-color) = 6, beating #2A6DF0's 3.
+    //     -> winner is #FF6600.
+    //   - Fixed (background-color only, shorthand ignored when present):
+    //     #2A6DF0 gets 3 (tag 1's background-color), #FF6600 gets 3 (tag 2's
+    //     background-color) — tied, and #2A6DF0 was tallied first.
+    //     -> winner is #2A6DF0.
+    const html = `<html><body>
+      <a class="cta-button" style="background:#FF6600;background-color:#2A6DF0">Get started</a>
+      <a class="cta-button" style="background-color:#FF6600">Also here</a>
+    </body></html>`;
+    expect(extractBrandColorFromHtml(html).toLowerCase()).toBe('#2a6df0');
+  });
+
+  it('falls back to the shorthand background only when background-color is absent on that element', () => {
+    const html = `<html><body>
+      <a class="cta-button" style="background:#FF6600">Buy now</a>
+    </body></html>`;
+    expect(extractBrandColorFromHtml(html).toLowerCase()).toBe('#ff6600');
+  });
 });
 
 describe('extractLogoUrlFromHtml', () => {

@@ -153,8 +153,13 @@ export function extractBrandColorFromHtml(html: string): string {
   add(themeColorMatch?.[1] ?? null, 5);
 
   for (const ctaTag of html.match(CTA_TAG_RE) ?? []) {
-    add(extractStyleColor(ctaTag, 'background-color'), 3);
-    add(extractStyleColor(ctaTag, 'background'), 3);
+    // A single element contributes at most one CTA-background score, mirroring
+    // upstream's single resolved `getComputedStyle().backgroundColor` per
+    // element: `background-color` wins when present, and the `background`
+    // shorthand is only consulted as a fallback — never both, or an element
+    // declaring both properties would double-count (or score two colors when
+    // only one applies).
+    add(extractStyleColor(ctaTag, 'background-color') ?? extractStyleColor(ctaTag, 'background'), 3);
     add(extractStyleColor(ctaTag, 'border-color'), 1);
   }
 
