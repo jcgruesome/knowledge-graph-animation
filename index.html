@@ -244,42 +244,6 @@
       </form>
       <div class="caption" id="search-caption">Press enter to route the query</div>
     </div>
-    <script>
-      // Static copy (title, search field, verified line) has no build-time templating, so it
-      // is bootstrapped here from `?locale=` before the module script runs. Keep this in sync
-      // with src/i18n/en.ts / src/i18n/es.ts — `main.ts` re-derives the same locale via
-      // getDictionary() for everything rendered at runtime.
-      (function () {
-        var locale = new URLSearchParams(location.search).get('locale') === 'es' ? 'es' : 'en';
-        if (locale !== 'es') return;
-        document.documentElement.lang = 'es';
-        document.title = 'ReshapeX · La señal se convierte en respuesta';
-        var byId = function (id) { return document.getElementById(id); };
-        var input = byId('search-input');
-        if (input) {
-          input.setAttribute('placeholder', 'Hacer una pregunta');
-          input.setAttribute('aria-label', 'Hacer una pregunta');
-        }
-        var send = byId('search-send');
-        if (send) send.setAttribute('aria-label', 'Enviar consulta');
-        var caption = byId('search-caption');
-        if (caption) caption.textContent = 'Presiona enter para enviar la consulta';
-        var soundHint = byId('sound-hint');
-        if (soundHint) soundHint.textContent = 'Clic para activar el sonido';
-        var controlsHint = byId('controls-hint');
-        if (controlsHint) {
-          controlsHint.textContent =
-            'Arrastra o usa las flechas para orbitar · Shift para desplazar · Rueda para acercar · ' +
-            'Clic en un nodo para enviar una consulta · C recupera la cámara · Espacio pausa · E exporta un ciclo';
-        }
-        var verified = byId('card-verified');
-        if (verified) verified.textContent = '✓ Validado contra la referencia técnica oficial';
-        var voice = byId('voice');
-        if (voice) voice.textContent = 'La señal se convierte en respuesta.';
-        var beat = byId('beat');
-        if (beat) beat.textContent = 'Campo en reposo';
-      })();
-    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
