@@ -18,6 +18,14 @@ import { execFileSync } from 'node:child_process';
 const GPU_LAUNCH_ARGS = ['--use-gl=angle', '--use-angle=metal', '--ignore-gpu-blocklist', '--enable-gpu-rasterization'];
 
 export async function renderKit(opts: { baseUrl: string; slug: string; outPath: string }): Promise<void> {
+  // Fail fast on a missing ffmpeg before paying for the ~20-25s browser recording: this check
+  // is milliseconds, the recording is not.
+  try {
+    execFileSync('ffmpeg', ['-version'], { stdio: 'pipe' });
+  } catch (err) {
+    throw new Error(`renderKit: ffmpeg is not available on PATH (required to transcode WebM to MP4). ${(err as Error).message}`);
+  }
+
   const browser = await chromium.launch({ args: GPU_LAUNCH_ARGS });
   try {
     const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });

@@ -74,7 +74,7 @@ async function main(): Promise<void> {
   console.log(`\nDraft kit written: public/kits/${slug}.json`);
   console.log(`Dropped ${generated.queries.length - queries.length} low-confidence Q&A, ${generated.categories.length - catalogNames.length} low-confidence categories.`);
 
-  console.log(`[7/7] Rendering demo video against ${opts.baseUrl} (this replays a full ~20s animation loop and can take several minutes headlessly)...`);
+  console.log(`[7/7] Rendering demo video against ${opts.baseUrl} (replays a full ~20s animation loop; usually finishes in under a minute. If it's taking much longer, GPU acceleration may have failed to engage in headless Chromium)...`);
   mkdirSync('dist-demos', { recursive: true });
   const outPath = `dist-demos/${slug}.mp4`;
   await renderKit({ baseUrl: opts.baseUrl, slug, outPath });
