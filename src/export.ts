@@ -25,8 +25,11 @@ export interface ExporterHooks {
 export class LoopExporter {
   active = false;
 
-  /** Resolvers for any in-flight `startAndAwaitBlob()` calls, fulfilled when recording stops. */
-  private pendingBlobResolvers: Array<(blob: Blob) => void> = [];
+  /**
+   * Pending `startAndAwaitBlob()` callers: resolved with the recorded Blob on a clean `onstop`,
+   * or rejected on `onerror` so a mid-recording failure can't leave a headless caller hanging.
+   */
+  private pendingBlobCallbacks: Array<{ resolve: (blob: Blob) => void; reject: (err: Error) => void }> = [];
 
   constructor(
     private readonly renderer: WebGLRenderer,
@@ -47,7 +50,7 @@ export class LoopExporter {
         reject(new Error('LoopExporter is already recording'));
         return;
       }
-      this.pendingBlobResolvers.push(resolve);
+      this.pendingBlobCallbacks.push({ resolve, reject });
       this.start();
     });
   }
@@ -100,9 +103,23 @@ export class LoopExporter {
       restore();
       this.hooks.onStatus(`exported ${(blob.size / 1e6).toFixed(1)} MB`);
       setTimeout(() => this.hooks.onStatus(''), 4000);
-      const resolvers = this.pendingBlobResolvers;
-      this.pendingBlobResolvers = [];
-      for (const resolve of resolvers) resolve(blob);
+      const callbacks = this.pendingBlobCallbacks;
+      this.pendingBlobCallbacks = [];
+      for (const { resolve } of callbacks) resolve(blob);
+    };
+    recorder.onerror = (ev) => {
+      // A mid-recording failure (encoder error, track ending unexpectedly, etc.) never fires
+      // onstop's normal completion path. Without this, any `startAndAwaitBlob()` caller would
+      // await forever. Reject whoever's waiting; the E-key/download flow has nothing waiting
+      // on this and is otherwise unaffected.
+      restore();
+      const err = (ev as unknown as { error?: DOMException }).error;
+      const reason = new Error(`LoopExporter recording failed: ${err?.message ?? 'unknown MediaRecorder error'}`);
+      const callbacks = this.pendingBlobCallbacks;
+      this.pendingBlobCallbacks = [];
+      for (const { reject } of callbacks) reject(reason);
+      this.hooks.onStatus('export failed');
+      setTimeout(() => this.hooks.onStatus(''), 4000);
     };
 
     this.hooks.begin();
