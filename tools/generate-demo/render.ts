@@ -17,7 +17,7 @@ import { execFileSync } from 'node:child_process';
  */
 const GPU_LAUNCH_ARGS = ['--use-gl=angle', '--use-angle=metal', '--ignore-gpu-blocklist', '--enable-gpu-rasterization'];
 
-export async function renderKit(opts: { baseUrl: string; slug: string; outPath: string }): Promise<void> {
+export async function renderKit(opts: { baseUrl: string; slug: string; outPath: string; density?: 1 | 2 | 3 }): Promise<void> {
   // Fail fast on a missing ffmpeg before paying for the ~20-25s browser recording: this check
   // is milliseconds, the recording is not.
   try {
@@ -29,7 +29,9 @@ export async function renderKit(opts: { baseUrl: string; slug: string; outPath: 
   const browser = await chromium.launch({ args: GPU_LAUNCH_ARGS });
   try {
     const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
-    await page.goto(`${opts.baseUrl}/?kit=${opts.slug}`);
+    // `?density=` is main.ts's own graph-size switch (1 | 2 | 3); omitted, the page defaults to 1.
+    const density = opts.density ? `&density=${opts.density}` : '';
+    await page.goto(`${opts.baseUrl}/?kit=${encodeURIComponent(opts.slug)}${density}`);
     await page.waitForSelector('.hud.visible', { timeout: 15_000 });
 
     // Encoded in-browser via FileReader (not Node's Buffer, which doesn't exist in this
