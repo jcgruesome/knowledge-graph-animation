@@ -113,9 +113,13 @@ export async function generateContent(
   }
 
   const client = new Anthropic({ apiKey });
-  const prompt = PROMPT_TEMPLATE.replace('{{COMPANY}}', opts.company)
-    .replace('{{LOCALE}}', opts.locale)
-    .replace('{{PAGES}}', formatPagesForPrompt(pages));
+  // Function-form replacements: the replacement text here is untrusted (scraped third-party
+  // page text, an operator-supplied company name), and `String.replace`'s *string* form would
+  // read `$&`, `$'`, "$`" or `$1` inside it as substitution patterns and corrupt the prompt.
+  // The function form inserts the value literally.
+  const prompt = PROMPT_TEMPLATE.replace('{{COMPANY}}', () => opts.company)
+    .replace('{{LOCALE}}', () => opts.locale)
+    .replace('{{PAGES}}', () => formatPagesForPrompt(pages));
 
   let response;
   try {
