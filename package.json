@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.120.0",
     "postprocessing": "^6.39.4",
     "three": "^0.185.1"
   },
