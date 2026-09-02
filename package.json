@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && pnpm typecheck:tools && vite build",
     "typecheck:tools": "tsc --noEmit -p tsconfig.tools.json",
     "generate-demo": "tsx tools/generate-demo/cli.ts",
+    "promote-demo": "tsx tools/generate-demo/promote.ts",
     "preview": "vite preview",
     "test": "vitest run"
   },

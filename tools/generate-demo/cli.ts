@@ -7,6 +7,7 @@ import { deriveGraphPalette } from '../../src/generator/palette-algorithm';
 import { parseBrandKit, type BrandKit } from '../../src/brandkit';
 import { companyToSlug, companyToSeed } from './slug';
 import { renderKit } from './render';
+import { deployPreview } from './deploy';
 
 const program = new Command();
 program
@@ -23,14 +24,14 @@ async function main(): Promise<void> {
   const slug = companyToSlug(opts.company);
   const seed = companyToSeed(opts.company, Number(opts.seedVariant));
 
-  console.log(`[1/7] Scraping ${opts.url}...`);
+  console.log(`[1/8] Scraping ${opts.url}...`);
   const scraped = await scrapeProspect(opts.url);
   const locale = opts.locale === 'auto' ? (scraped.detectedLocale.startsWith('es') ? 'es' : 'en') : (opts.locale as 'es' | 'en');
 
-  console.log('[2/7] Generating grounded content...');
+  console.log('[2/8] Generating grounded content...');
   const generated = await generateContent(scraped.pages, { locale, company: opts.company });
 
-  console.log('[3/7] Applying grounding gate...');
+  console.log('[3/8] Applying grounding gate...');
   const queries = applyGroundingGate(
     generated.queries.map((r) => ({ item: r.item, confidence: r.confidence })),
     { minSurvivors: 8 },
@@ -40,11 +41,11 @@ async function main(): Promise<void> {
     { minSurvivors: 5 },
   );
 
-  console.log('[4/7] Deriving palette...');
+  console.log('[4/8] Deriving palette...');
   const palette = deriveGraphPalette(scraped.brandColorHex);
   if (palette.usedFallback) console.warn(`  ⚠ brand color ${scraped.brandColorHex} needed the fallback hue — consider reviewing manually.`);
 
-  console.log('[5/7] Assembling BrandKit...');
+  console.log('[5/8] Assembling BrandKit...');
   const logoExt = scraped.logoUrl?.split('.').pop() ?? 'svg';
   const logoPath = `/kits/${slug}/logo.${logoExt}`;
   const kit: BrandKit = {
@@ -61,7 +62,7 @@ async function main(): Promise<void> {
   };
   parseBrandKit(kit); // throws before any filesystem writes if the assembled object is malformed
 
-  console.log('[6/7] Writing BrandKit and downloading logo...');
+  console.log('[6/8] Writing BrandKit and downloading logo...');
   mkdirSync(`public/kits/${slug}`, { recursive: true });
   if (scraped.logoUrl) {
     const res = await fetch(scraped.logoUrl);
@@ -74,14 +75,19 @@ async function main(): Promise<void> {
   console.log(`\nDraft kit written: public/kits/${slug}.json`);
   console.log(`Dropped ${generated.queries.length - queries.length} low-confidence Q&A, ${generated.categories.length - catalogNames.length} low-confidence categories.`);
 
-  console.log(`[7/7] Rendering demo video against ${opts.baseUrl} (replays a full ~20s animation loop; usually finishes in under a minute. If it's taking much longer, GPU acceleration may have failed to engage in headless Chromium)...`);
+  console.log(`[7/8] Rendering demo video against ${opts.baseUrl} (replays a full ~20s animation loop; usually finishes in under a minute. If it's taking much longer, GPU acceleration may have failed to engage in headless Chromium)...`);
   mkdirSync('dist-demos', { recursive: true });
   const outPath = `dist-demos/${slug}.mp4`;
   await renderKit({ baseUrl: opts.baseUrl, slug, outPath });
 
   console.log(`\nDemo video written: ${outPath}`);
   console.log(`Draft kit written: public/kits/${slug}.json`);
-  console.log('Deploy steps are added in a later task of this plan.');
+
+  console.log('[8/8] Deploying preview...');
+  const previewUrl = await deployPreview();
+  console.log(`\nPreview: ${previewUrl}`);
+  console.log(`MP4: ${outPath}`);
+  console.log(`To promote to a stable URL: pnpm promote-demo ${slug} --project <name>`);
 }
 
 main().catch((err) => {
