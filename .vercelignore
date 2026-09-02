@@ -3,3 +3,5 @@ exports
 *.jpeg
 node_modules
 dist
+dist-demos
+.kits-held

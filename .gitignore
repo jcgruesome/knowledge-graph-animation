@@ -7,3 +7,4 @@ exports
 public/kits/*.json
 dist-demos
 .env*
+.kits-held
