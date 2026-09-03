@@ -5,16 +5,26 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "build": "tsc --noEmit && pnpm typecheck:tools && vite build",
+    "typecheck:tools": "tsc --noEmit -p tsconfig.tools.json",
+    "generate-demo": "tsx tools/generate-demo/cli.ts",
+    "promote-demo": "tsx tools/generate-demo/promote.ts",
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.120.0",
     "postprocessing": "^6.39.4",
     "three": "^0.185.1"
   },
   "devDependencies": {
+    "@types/node": "^26.4.0",
     "@types/three": "^0.185.4",
+    "commander": "^15.0.0",
+    "playwright": "^1.62.1",
+    "tsx": "^4.23.13",
     "typescript": "^7.0.2",
-    "vite": "^8.2.2"
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
   }
 }

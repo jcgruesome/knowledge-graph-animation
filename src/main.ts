@@ -27,22 +27,37 @@ import {
   BlendFunction,
 } from 'postprocessing';
 import { buildGraph, type Density } from './graph';
+import { getDictionary } from './i18n';
+import { loadBrandKit, type BrandKit } from './brandkit';
+import { DEFAULT_QUERIES } from './queries';
 import { ANSWER, buildSchedule, LAND, LOOP, edgeState, envelope, ignition, nodeActivation } from './schedule';
 import { NodeField } from './nodes';
 import { EdgeField } from './edges';
 import { AgentSearch } from './agentSearch';
-import { SignalField } from './signals';
+import { SignalField, DEFAULT_TINT, syncDefaultTint } from './signals';
 import { ClusterFields, createBackdrop, createDust } from './atmosphere';
 import { CameraRig } from './cameraRig';
-import { haloColor, PALETTE, VIOLET_HALO } from './palette';
+import { haloColor, buildPalette, PALETTE, VIOLET_HALO } from './palette';
 import { LoopExporter } from './export';
-import { DEFAULT_TINT } from './signals';
 import { unfurl } from './motion';
 import { SoundDesign } from './audio';
 import { VolumetricHazeEffect } from './volumetrics';
 import { OVERLAY_LAYER, TRAIL_LAYER, TrailAccumulator } from './trails';
 
-const SEED = 20260828;
+// A BrandKit (loaded via ?kit=<slug>) overrides locale, palette, queries, logo, and seed.
+// With no ?kit= param, the built-in ReshapeX defaults stand.
+const kitSlug = new URLSearchParams(location.search).get('kit');
+const kit: BrandKit | null = kitSlug ? await loadBrandKit(kitSlug) : null;
+const dict = getDictionary(kit?.locale ?? 'en');
+buildPalette(kit?.palette);
+syncDefaultTint(); // DEFAULT_TINT is captured at signals.ts import time; re-derive it post-override.
+const queries = kit?.queries?.length ? kit.queries : DEFAULT_QUERIES;
+const SEED = kit?.seed ?? 20260828;
+
+if (kit) {
+  const logoEl = document.querySelector<HTMLImageElement>('.logo');
+  if (logoEl) logoEl.src = kit.logoPath;
+}
 
 // ---------------------------------------------------------------- scene
 const canvas = document.getElementById('scene');
@@ -62,7 +77,14 @@ const camera = rig.camera;
 const densityParam = Number(new URLSearchParams(location.search).get('density') ?? '1');
 const density: Density = densityParam === 2 ? 2 : densityParam === 3 ? 3 : 1;
 const graph = buildGraph(SEED, density);
-const schedule = buildSchedule(graph, SEED);
+// A kit overrides the cluster hub names it actually supplies; anything it omits (or supplies
+// empty) falls back to the dictionary's built-in ReshapeX defaults.
+const effectiveDict = {
+  ...dict,
+  ...(kit?.catalogNames?.length ? { catalogNames: kit.catalogNames } : {}),
+  ...(kit?.docNames?.length ? { docNames: kit.docNames } : {}),
+};
+const schedule = buildSchedule(graph, SEED, effectiveDict);
 
 // Flowers unfurl: leaves start as a bud inside their hub and spring out as the hub wakes.
 // Hubs and roots are fixed (-Infinity); leaves of hubs that never wake stay buds (Infinity).
@@ -366,22 +388,34 @@ const progressEl = el('progress');
 const labelsEl = el('labels');
 const logEl = el('log');
 
+// index.html ships the English copy as static markup with no build-time templating, so the
+// resolved dictionary (a kit's locale, or `en` by default) is applied over it here. This is
+// the single place static chrome is localized — there is no separate `?locale=` bootstrap.
+{
+  document.documentElement.lang = dict.locale;
+  document.title = `ReshapeX · ${dict.hud.title}`;
+  const searchInput = el('search-input') as HTMLInputElement;
+  searchInput.placeholder = dict.hud.searchPlaceholder;
+  searchInput.setAttribute('aria-label', dict.hud.searchAriaLabel);
+  el('search-send').setAttribute('aria-label', dict.hud.sendAriaLabel);
+  el('search-caption').textContent = dict.hud.caption;
+  el('sound-hint').textContent = dict.hud.soundHint;
+  el('controls-hint').textContent = dict.hud.controlsHint;
+  el('card-verified').textContent = dict.hud.verified;
+  beatEl.textContent = dict.beats.dormant;
+  voiceEl.textContent = dict.voice[0] ?? '';
+}
+
 const BEATS: Array<[number, string]> = [
-  [0, 'Dormant field'],
-  [2, 'Customer query'],
-  [4, 'Grounding'],
-  [6.8, 'Tooling catalog resolves'],
-  [9.6, 'Cross-validation'],
-  [11.2, 'Configuration space'],
-  [13.4, 'Streams converge'],
-  [ANSWER, 'Validated part number'],
-  [18, 'Recede'],
-];
-// Module lines on the answer card. Illustrative module ids, not real part numbers.
-const ANSWER_MODULES: Array<Array<[string, string]>> = [
-  [['Tool changer', 'TC · 046'], ['Gripper', 'GR · 112'], ['Robot-side adapter', 'RA · 207']],
-  [['Tool changer', 'TC · 031'], ['Compliance device', 'CD · 088'], ['Utility coupler', 'UC · 014']],
-  [['Tool changer', 'TC · 052'], ['Vacuum end-effector', 'VE · 141'], ['Robot-side adapter', 'RA · 219']],
+  [0, dict.beats.dormant],
+  [2, dict.beats.customerQuery],
+  [4, dict.beats.grounding],
+  [6.8, dict.beats.catalogResolves],
+  [9.6, dict.beats.crossValidation],
+  [11.2, dict.beats.configSpace],
+  [13.4, dict.beats.streamsConverge],
+  [ANSWER, dict.beats.answerValidated],
+  [18, dict.beats.recede],
 ];
 const GLYPHS = '0123456789ABCDEFGHKLMNPRSTUVWXYZ·-';
 /** Scramble a value toward its final text as decode goes 0 → 1. */
@@ -394,22 +428,14 @@ function decodeText(value: string, decode: number, seed: number): string {
   }
   return out;
 }
-const VOICE = [
-  'Signal becomes intelligence.',
-  'Millions of valid configurations. One validated answer.',
-  'Decades of pattern recognition, available to every customer.',
-  'Uncertain? It asks an engineer. It never guesses.',
-];
-// Quick Consult runs in seven languages; the inbound query rotates through them each loop.
-const QUERIES = [
-  'customer query · UR10e · 12.5 kg · palletizing',
-  'Kundenanfrage · KUKA KR 10 · 8 kg · Schweißen',
-  'consulta · FANUC CRX-10iA · 10 kg · carga de máquinas',
-  'demande · ABB IRB 1300 · 7 kg · assemblage',
-  'richiesta · Yaskawa GP12 · 12 kg · pallettizzazione',
-  '問い合わせ · Denso VS-087 · 7 kg · ピッキング',
-  '咨询 · UR5e · 5 kg · 包装',
-];
+const VOICE = dict.voice;
+// A BrandKit's queries drive the inbound rotation when present; otherwise the built-in
+// ReshapeX sample rotation in queries.ts does (which runs in seven languages, one per loop).
+const QUERIES = queries.map((q) => q.question);
+/** The matched answer for a query, from the loaded BrandKit; the dictionary's fallback otherwise. */
+function answerFor(query: string): string {
+  return queries.find((q) => q.question === query)?.answer ?? dict.hud.fallbackAnswer;
+}
 let voiceIndex = 0;
 let lastBeat = '';
 
@@ -523,22 +549,11 @@ function computeOverlay(t: number, w: number, h: number): OverlayState {
   const typeAge = t - (LAND - 2.0);
   const typed = typeAge < 0 ? 0 : Math.min(fullQuery.length, Math.floor(typeAge * 24));
   const queryOpacity = t < LAND - 2.0 ? 0 : t < 9.5 ? Math.min(1, typeAge * 3) : Math.max(0, 1 - (t - 9.5) * 1.4);
-  // Answer card decodes line by line after the answer leaves.
+  // Answer card decodes line by line after the answer leaves: the query, then its matched answer.
   const cardAge = t - ANSWER;
-  const parts = fullQuery.split(' · ').slice(1);
-  const [robot = '', payload = '', application = ''] = parts;
-  const modules = ANSWER_MODULES[lastLoop % ANSWER_MODULES.length]!;
-  // A sample query carries its own structure; a typed one is shown as asked.
-  const head = parts.length >= 3
-    ? [
-        { label: 'Robot', value: robot, decode: Math.min(1, Math.max(0, (cardAge - 0.35) / 0.5)) },
-        { label: 'Payload', value: payload, decode: Math.min(1, Math.max(0, (cardAge - 0.55) / 0.5)) },
-        { label: 'Application', value: application, decode: Math.min(1, Math.max(0, (cardAge - 0.75) / 0.5)) },
-      ]
-    : [{ label: 'Query', value: fullQuery, decode: Math.min(1, Math.max(0, (cardAge - 0.35) / 0.6)) }];
   const lines = [
-    ...head,
-    ...modules.map((m, i) => ({ label: m[0], value: m[1], decode: Math.min(1, Math.max(0, (cardAge - 1.0 - i * 0.28) / 0.7)) })),
+    { label: dict.hud.consultaLabel, value: fullQuery, decode: Math.min(1, Math.max(0, (cardAge - 0.35) / 0.6)) },
+    { label: dict.hud.respuestaLabel, value: answerFor(fullQuery), decode: Math.min(1, Math.max(0, (cardAge - 1.1) / 0.9)) },
   ];
   // The DOM keeps one row per line and never clears the ones it does not touch.
   while (lines.length < CARD_ROWS) lines.push({ label: '', value: '', decode: 0 });
@@ -687,7 +702,7 @@ function drawOverlay(ctx: CanvasRenderingContext2D, w: number, h: number, o: Ove
       ctx.globalAlpha = o.card.verified;
       ctx.font = `600 ${10 * k}px "Hanken Grotesk", system-ui, sans-serif`;
       ctx.fillStyle = `#${PALETTE.electricGreen.getHexString()}`;
-      ctx.fillText('✓  VALIDATED AGAINST CANONICAL REFERENCE', x, y + 4 * k);
+      ctx.fillText(dict.hud.verified.toUpperCase(), x, y + 4 * k);
       ctx.globalAlpha = 1;
     }
   }
@@ -970,6 +985,7 @@ function handoffPoint(): { x: number; y: number } {
 const search = new AgentSearch({
   handoff: handoffPoint,
   flightSeconds: 2.0, // matches the scheduled inbound signal, LAND - 2.0 → LAND
+  captions: { default: dict.hud.caption, sending: dict.hud.captionSending },
   launch: (query) => {
     if (exporter.active) return;
     userQuery = query;
@@ -1020,7 +1036,7 @@ window.addEventListener('pointermove', (ev) => {
 function unlockAudio(): void {
   if (sound.unlocked) return;
   sound.unlock();
-  soundHint.textContent = 'M mutes sound';
+  soundHint.textContent = dict.hud.soundHintOn;
 }
 window.addEventListener('pointerdown', (ev) => {
   unlockAudio();
@@ -1052,7 +1068,7 @@ window.addEventListener('keydown', (ev) => {
   if (search.typing) return;
   if (ev.key === 'm') {
     sound.setMuted(!sound.muted);
-    soundHint.textContent = sound.muted ? 'M unmutes sound' : 'M mutes sound';
+    soundHint.textContent = sound.muted ? dict.hud.soundHintMuted : dict.hud.soundHintOn;
   }
   if (ev.code.startsWith('Arrow')) {
     ev.preventDefault();
@@ -1103,7 +1119,13 @@ window.addEventListener('resize', () => {
 // Debug / capture hooks: seek the loop clock and pause.
 declare global {
   interface Window {
-    kg: { seek: (t: number) => void; pause: (p: boolean) => void; debug: { renderer: WebGLRenderer; edges: Mesh } };
+    kg: {
+      seek: (t: number) => void;
+      pause: (p: boolean) => void;
+      debug: { renderer: WebGLRenderer; edges: Mesh };
+      /** Triggers the same recording as the `E` key, headlessly. Resolves once one full loop is recorded. */
+      exportLoop: () => Promise<Blob>;
+    };
   }
 }
 window.kg = {
@@ -1114,6 +1136,7 @@ window.kg = {
     paused = p;
   },
   debug: { renderer, edges: edges.mesh },
+  exportLoop: () => exporter.startAndAwaitBlob(),
 };
 
 requestAnimationFrame(() => hud.classList.add('visible'));

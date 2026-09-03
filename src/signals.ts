@@ -4,6 +4,17 @@ import type { Color } from 'three';
 
 export const DEFAULT_TINT = PALETTE.cyberBlue.clone().lerp(PALETTE.white, 0.35);
 
+/**
+ * Recomputes DEFAULT_TINT in place from the current PALETTE.cyberBlue. This constant is
+ * captured at module-import time, before a BrandKit override (buildPalette) ever runs — call
+ * this once, right after buildPalette(), so the injected-query trail, inbound-signal trail, and
+ * hero-bridge edges (all of which use DEFAULT_TINT) pick up the override instead of staying
+ * frozen at the original ReshapeX cyan.
+ */
+export function syncDefaultTint(): void {
+  DEFAULT_TINT.copy(PALETTE.cyberBlue).lerp(PALETTE.white, 0.35);
+}
+
 const TRAIL = 36;
 
 const vertex = /* glsl */ `

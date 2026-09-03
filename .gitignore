@@ -4,4 +4,7 @@ dist
 *.jpeg
 exports
 .vercel
-.vercel
+public/kits/*.json
+dist-demos
+.env*
+.kits-held

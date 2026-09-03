@@ -121,7 +121,14 @@ export type Density = 1 | 2 | 3;
 
 export function buildGraph(seed: number, density: Density = 1): Graph {
   const rng = new Random(seed ^ (density * 0x45d9f3b));
-  const D = { hubs: [58, 110, 180][density - 1]!, leafScale: [1, 1.7, 3.0][density - 1]!, docsHubs: [15, 28, 42][density - 1]!, tail: [430, 1400, 4000][density - 1]!, radius: [1, 1.25, 1.5][density - 1]! };
+  const jitter = (base: number, spread: number): number => Math.round(base * (1 - spread + rng.next() * spread * 2));
+  const D = {
+    hubs: jitter([58, 110, 180][density - 1]!, 0.24),
+    leafScale: [1, 1.7, 3.0][density - 1]!,
+    docsHubs: jitter([15, 28, 42][density - 1]!, 0.24),
+    tail: jitter([430, 1400, 4000][density - 1]!, 0.24),
+    radius: [1, 1.25, 1.5][density - 1]!,
+  };
   const nodes: GraphNode[] = [];
   const positions: number[] = [];
   const edges: GraphEdge[] = [];

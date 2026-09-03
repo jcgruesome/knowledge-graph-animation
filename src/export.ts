@@ -25,6 +25,12 @@ export interface ExporterHooks {
 export class LoopExporter {
   active = false;
 
+  /**
+   * Pending `startAndAwaitBlob()` callers: resolved with the recorded Blob on a clean `onstop`,
+   * or rejected on `onerror` so a mid-recording failure can't leave a headless caller hanging.
+   */
+  private pendingBlobCallbacks: Array<{ resolve: (blob: Blob) => void; reject: (err: Error) => void }> = [];
+
   constructor(
     private readonly renderer: WebGLRenderer,
     private readonly composer: EffectComposer,
@@ -32,6 +38,22 @@ export class LoopExporter {
     private readonly glCanvas: HTMLCanvasElement,
     private readonly hooks: ExporterHooks,
   ) {}
+
+  /**
+   * Same recording as `start()`, but returns a Promise that resolves with the recorded Blob
+   * once the loop finishes, instead of only relying on the `<a download>` side effect. Used by
+   * the headless automation hook (`window.kg.exportLoop()`); the browser download still fires.
+   */
+  startAndAwaitBlob(): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      if (this.active) {
+        reject(new Error('LoopExporter is already recording'));
+        return;
+      }
+      this.pendingBlobCallbacks.push({ resolve, reject });
+      this.start();
+    });
+  }
 
   start(): void {
     if (this.active) return;
@@ -80,6 +102,23 @@ export class LoopExporter {
       setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
       restore();
       this.hooks.onStatus(`exported ${(blob.size / 1e6).toFixed(1)} MB`);
+      setTimeout(() => this.hooks.onStatus(''), 4000);
+      const callbacks = this.pendingBlobCallbacks;
+      this.pendingBlobCallbacks = [];
+      for (const { resolve } of callbacks) resolve(blob);
+    };
+    recorder.onerror = (ev) => {
+      // A mid-recording failure (encoder error, track ending unexpectedly, etc.) never fires
+      // onstop's normal completion path. Without this, any `startAndAwaitBlob()` caller would
+      // await forever. Reject whoever's waiting; the E-key/download flow has nothing waiting
+      // on this and is otherwise unaffected.
+      restore();
+      const err = (ev as unknown as { error?: DOMException }).error;
+      const reason = new Error(`LoopExporter recording failed: ${err?.message ?? 'unknown MediaRecorder error'}`);
+      const callbacks = this.pendingBlobCallbacks;
+      this.pendingBlobCallbacks = [];
+      for (const { reject } of callbacks) reject(reason);
+      this.hooks.onStatus('export failed');
       setTimeout(() => this.hooks.onStatus(''), 4000);
     };
 
