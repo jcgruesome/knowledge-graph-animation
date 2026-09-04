@@ -5,3 +5,4 @@ dist
 exports
 .vercel
 .vercel
+.env*
