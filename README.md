@@ -21,6 +21,82 @@ pnpm dev        # http://localhost:5173
 pnpm build      # typecheck + production bundle in dist/
 ```
 
+## Prospect demo generator
+
+`pnpm generate-demo --url <prospect-url> --company "<name>"` turns this animation into a
+personalized demo for any company: scrapes the site, extracts a brand color and logo, generates
+grounded Q&A content via Claude, derives a full graph palette algorithmically from that one brand
+color, randomizes the graph's structure per company, renders an MP4 via a headless browser, and
+deploys an un-aliased Vercel preview. Full design:
+`docs/superpowers/specs/2026-09-01-prospect-demo-generator-design.md`.
+
+### Prerequisites
+
+- `pnpm dev` running in another terminal. The render step drives a headless browser against it
+  (default `http://localhost:5173`, override with `--base-url`).
+- `ANTHROPIC_API_KEY` exported. Q&A generation needs it; the CLI fails fast and cleanly if it's
+  missing rather than scraping first and failing later.
+- `ffmpeg` on `PATH`. Used to transcode the recorded WebM to MP4; checked before the browser even
+  launches.
+- `pnpm exec playwright install chromium`, once, for the headless render.
+- A `vercel` CLI login with access to the `reshapex` team.
+
+### Usage
+
+```bash
+pnpm generate-demo --url https://example.com --company "Example Corp"
+```
+
+| Flag | Default | Notes |
+| --- | --- | --- |
+| `--url <url>` | required | prospect site to scrape |
+| `--company <name>` | required | drives the slug, the seed, and the generated content |
+| `--locale <es\|en\|auto>` | `auto` | `auto` detects from the scraped site's `<html lang>` |
+| `--density <1\|2\|3>` | `1` | passed through to the render |
+| `--seed-variant <n>` | `0` | salts the seed for an intentional do-over without changing the company slug |
+| `--base-url <url>` | `http://localhost:5173` | origin of the running dev/preview server the render navigates to |
+
+Output: `public/kits/<slug>.json` (the generated BrandKit) and `dist-demos/<slug>.mp4`, plus an
+un-aliased Vercel preview URL printed at the end. Preview it locally first: `pnpm dev`, then open
+`/?kit=<slug>` (add `&density=<n>` to match a non-default `--density` run).
+
+**Sanity-check the generated palette before promoting.** The scrape adapter reads brand color from
+inline styles and a `theme-color` meta tag, not computed styles from external CSS, so a prospect
+whose brand color lives only in a stylesheet gets a generic fallback instead of their real color.
+Compare `public/kits/<slug>.json`'s `palette.brand` against the prospect's actual site and
+hand-edit it (then re-render) if they don't match. See `deriveGraphPalette` in
+`src/generator/palette-algorithm.ts` for how the rest of the palette derives from that one value.
+
+Low-confidence Q&A pairs and category labels are dropped by a grounding gate
+(`tools/generate-demo/grounding-gate.ts`). If fewer than 8 Q&A pairs or 5 categories survive, the
+CLI fails rather than shipping thin content. An operator supplies content manually in that case.
+
+### Promoting to a stable URL
+
+`pnpm generate-demo` only ever deploys an un-aliased preview. Moving a specific kit to a stable,
+named Vercel project is a separate, explicitly human-invoked step:
+
+```bash
+pnpm promote-demo <slug> --project <name>
+```
+
+This links (creating first if needed) a Vercel project named `<name>` under the `reshapex` team
+and deploys it to production, aliased at `https://<name>.vercel.app`. Kept separate from the main
+pipeline on purpose: it's a real production deploy under a real team account.
+
+### Troubleshooting
+
+- **The render is taking several minutes, not under one.** Headless Chromium's software WebGL
+  renderer manages roughly 3 fps; GPU acceleration (`render.ts`'s launch args) should get it to
+  ~60. A slow render almost always means GPU acceleration silently failed to engage rather than
+  a hung process. Worth interrupting and investigating rather than waiting it out.
+- **A stray Vercel project got created.** Running `generate-demo` from a fresh checkout or worktree
+  with no `.vercel/` project link makes `vercel`'s own CLI infer a project name from the directory
+  and create it. On the first run this can even auto-promote to production. Always `vercel link`
+  a lane deliberately before its first `generate-demo` run if you want a specific project name;
+  clean up an accidental one with `printf 'y\n' | vercel project rm <name> --scope reshapex` (the
+  prompt wants a literal `y`, not the project name).
+
 ## Density
 
 `?density=1` (default, ~2k nodes, most legible) · `?density=2` (~8k) · `?density=3` (~20k nodes, ~37k
