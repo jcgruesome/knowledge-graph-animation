@@ -65,6 +65,33 @@ describe('extractBrandColorFromHtml', () => {
     </body></html>`;
     expect(extractBrandColorFromHtml(html).toLowerCase()).toBe('#ff6600');
   });
+
+  it('falls back to msapplication-TileColor when theme-color is absent or non-brand', () => {
+    // Real-world case: item24.com ships a white theme-color (correctly rejected) and zero
+    // inline-styled CTAs/links (a component-framework build), but a usable TileColor meta.
+    const html = `<html><head>
+      <meta name="theme-color" content="#ffffff">
+      <meta name="msapplication-TileColor" content="#ff0000">
+    </head><body></body></html>`;
+    expect(extractBrandColorFromHtml(html).toLowerCase()).toBe('#ff0000');
+  });
+
+  it('prefers a valid theme-color over msapplication-TileColor when both are present', () => {
+    const html = `<html><head>
+      <meta name="theme-color" content="#2A6DF0">
+      <meta name="msapplication-TileColor" content="#FF0000">
+    </head><body></body></html>`;
+    expect(extractBrandColorFromHtml(html).toLowerCase()).toBe('#2a6df0');
+  });
+
+  it('prefers msapplication-TileColor over a lower-weighted CTA background', () => {
+    const html = `<html><head>
+      <meta name="msapplication-TileColor" content="#FF0000">
+    </head><body>
+      <a class="cta-button" style="background-color:#2A6DF0">Get started</a>
+    </body></html>`;
+    expect(extractBrandColorFromHtml(html).toLowerCase()).toBe('#ff0000');
+  });
 });
 
 describe('extractLogoUrlFromHtml', () => {
