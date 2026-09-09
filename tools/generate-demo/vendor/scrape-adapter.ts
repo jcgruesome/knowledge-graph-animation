@@ -15,9 +15,18 @@
 //   inline `style="..."` attributes on CTA-like elements/links. A color that
 //   only exists in a linked CSS file is invisible to this adapter — an honest
 //   trade for not vendoring Puppeteer + the SSRF-guard machinery into a video
-//   generator CLI. The scoring weights (theme-color 5, CTA background 3, CTA
-//   border 1, link color 1) and the "brand-like" saturation/lightness filter
-//   are ported as-is from `derivePalette()`.
+//   generator CLI. The scoring weights (theme-color 5, msapplication-TileColor
+//   4, CTA background 3, CTA border 1, link color 1) and the "brand-like"
+//   saturation/lightness filter are ported as-is from `derivePalette()`, except
+//   TileColor (see immediately below), which has no upstream equivalent.
+// - Added a signal upstream doesn't need: `msapplication-TileColor`. Sites
+//   built with a modern component framework (compiled CSS classes, zero inline
+//   `style="..."` attributes anywhere) leave nothing for the CTA/link scoring
+//   to find, and their `theme-color` is sometimes a neutral/white PWA default
+//   rather than the real brand color (confirmed on item24.com). TileColor is a
+//   legacy Windows-tile meta tag that's still commonly set to the real brand
+//   color even on such sites, so it's checked as a fallback, weighted below
+//   theme-color but above the CTA/link signals.
 // - Upstream's unblock ladder (`unblock.ts`) walks Puppeteer through several
 //   posture tiers (direct, identified-browser headers, a replayed human
 //   session, then Wayback) with page-level block classification (status code +
@@ -127,6 +136,11 @@ function isBrandColorHex(hex: string): boolean {
 const CTA_TAG_RE = /<(button|input)\b[^>]*>|<a\b[^>]*(?:class="[^"]*(?:btn|button|cta)[^"]*"|role="button")[^>]*>/gi;
 const STYLE_ATTR_RE = /style="([^"]*)"/i;
 const THEME_COLOR_RE = /<meta\s+name="theme-color"\s+content="([^"]+)"/i;
+// Windows tile / PWA manifest color. No upstream equivalent (upstream reads a live DOM's
+// computed styles and never needed this), but it's a real, fairly common brand-color signal on
+// sites built with modern component frameworks that apply all styling via compiled CSS classes
+// and leave zero inline `style="..."` attributes for the CTA/link scoring below to find.
+const TILE_COLOR_RE = /<meta\s+name="msapplication-TileColor"\s+content="([^"]+)"/i;
 const ANCHOR_TAG_RE = /<a\b[^>]*>/gi;
 
 function extractStyleColor(tagHtml: string, property: 'background-color' | 'background' | 'border-color' | 'color'): string | null {
@@ -151,6 +165,12 @@ export function extractBrandColorFromHtml(html: string): string {
   // Explicit brand signal from the site author — strongest weight, as upstream.
   const themeColorMatch = THEME_COLOR_RE.exec(html);
   add(themeColorMatch?.[1] ?? null, 5);
+
+  // Weighted below theme-color but above CTA background: a real, if secondary, brand-color
+  // signal for sites (like item24.com) whose theme-color is neutral/white and which have no
+  // inline-styled CTAs or links at all for the scoring below to find.
+  const tileColorMatch = TILE_COLOR_RE.exec(html);
+  add(tileColorMatch?.[1] ?? null, 4);
 
   for (const ctaTag of html.match(CTA_TAG_RE) ?? []) {
     // A single element contributes at most one CTA-background score, mirroring
