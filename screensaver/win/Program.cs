@@ -81,14 +81,18 @@ sealed class SaverForm : Form
         Cursor.Hide();
     }
 
-    // Child of the Screen Saver Settings preview window.
+    // Child of the Screen Saver Settings preview window. Position and size are set after reparenting:
+    // before the handle exists WinForms would create the window at CW_USEDEFAULT and keep that offset.
     public SaverForm(IntPtr parent, string webRoot) : this(webRoot, true, parent)
     {
         FormBorderStyle = FormBorderStyle.None;
+        StartPosition = FormStartPosition.Manual;
         GetClientRect(parent, out var r);
-        Bounds = new Rectangle(0, 0, r.Right - r.Left, r.Bottom - r.Top);
-        SetParent(Handle, parent);
-        SetWindowLong(Handle, -16, GetWindowLong(Handle, -16) | 0x40000000); // GWL_STYLE |= WS_CHILD
+        var size = new Size(r.Right - r.Left, r.Bottom - r.Top);
+        SetParent(Handle, parent); // creates the handle
+        const int GwlStyle = -16, WsPopup = unchecked((int)0x80000000), WsChild = 0x40000000;
+        SetWindowLong(Handle, GwlStyle, (GetWindowLong(Handle, GwlStyle) & ~WsPopup) | WsChild);
+        Bounds = new Rectangle(Point.Empty, size);
         Show();
     }
 
