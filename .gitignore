@@ -9,3 +9,4 @@ dist-demos
 .env*
 .kits-held
 dist-screensaver
+screensaver/mac/spike/build
