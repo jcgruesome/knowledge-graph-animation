@@ -13,7 +13,8 @@
     "test": "vitest run",
     "build:screensaver": "vite build -c vite.screensaver.config.ts",
     "verify:screensaver": "pnpm build:screensaver && tsx tools/screensaver/verify-web.ts",
-    "package:mac": "sh screensaver/mac/package.sh"
+    "package:mac": "sh screensaver/mac/package.sh",
+    "package:win": "echo \"package:win runs in CI only: see .github/workflows/screensaver-win.yml\" && exit 1"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
