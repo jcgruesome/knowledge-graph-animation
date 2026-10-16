@@ -55,10 +55,7 @@ const SEED = kit?.seed ?? 20260828;
 
 if (kit) {
   const logoEl = document.querySelector<HTMLImageElement>('.logo');
-  if (logoEl) {
-    if (kit.logoPath === '') logoEl.style.display = 'none';
-    else logoEl.src = kit.logoPath;
-  }
+  if (logoEl) logoEl.src = kit.logoPath;
 }
 
 // ---------------------------------------------------------------- scene

@@ -51,6 +51,8 @@ for (const seed of [1, 2, 3]) {
   labelsBySeed.push(text);
   const shown = await page.evaluate(() => getComputedStyle(document.getElementById('search')!).display);
   if (shown !== 'none') fail('search box is visible');
+  const logoOk = await page.evaluate(() => { const i = document.querySelector<HTMLImageElement>('.logo'); return !!i && i.naturalWidth > 0 && getComputedStyle(i).display !== 'none'; });
+  if (!logoOk) fail(`seed ${seed}: ReshapeX logo is not visible`);
   await page.close();
 }
 if (new Set(labelsBySeed).size < 3) fail('seeds 1-3 produced identical page text');

@@ -64,7 +64,7 @@ A pure, seeded function `generateSyntheticKit(seed): BrandKit` in `src/screensav
 the existing `BrandKit` type. It composes from curated word banks written for this feature
 (never derived from real customers):
 
-- company: fictional name, no logo (logo element hidden when `logoPath` is empty).
+- company: fictional name. The real ReshapeX logo (`public/reshapex-logo.svg`, a marketing asset) stays visible; the owner asked for it.
 - palette: one brand hue drawn from a bounded set of ReshapeX-family hues, then
   `deriveGraphPalette` (existing). Deep Space background stays. Constraint set by owner:
   "keep the ReshapeX palette family".
@@ -145,7 +145,7 @@ the ReshapeX palette family.
 ## My calls (flag if wrong)
 
 - Silent. Per-activation plus per-3-loops re-roll via reload. English only for the synthetic
-  rotation. Native WebView2 host preferred over Electron. Fictional company names without a logo.
+  rotation. Native WebView2 host preferred over Electron. Fictional company names (not displayed).
 
 ## Builder-check resolutions (my calls, flag if wrong)
 

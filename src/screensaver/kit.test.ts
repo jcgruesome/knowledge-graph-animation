@@ -35,7 +35,7 @@ describe('generateSyntheticKit', () => {
     expect(() => parseBrandKit(kit)).not.toThrow();
     expect(kit.seed).toBe(seed);
     expect(kit.locale).toBe('en');
-    expect(kit.logoPath).toBe('');
+    expect(kit.logoPath).toBe('/reshapex-logo.svg');
     expect(kit.catalogNames.length).toBeGreaterThanOrEqual(5);
     expect(kit.docNames?.length ?? 0).toBeGreaterThanOrEqual(3);
     expect(kit.queries.length).toBeGreaterThanOrEqual(8);

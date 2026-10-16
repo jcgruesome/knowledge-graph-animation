@@ -71,7 +71,7 @@ export function generateSyntheticKit(seed: number): BrandKit {
     company: rng.pick(COMPANIES),
     slug: `synthetic-${seed}`,
     locale: 'en',
-    logoPath: '',
+    logoPath: '/reshapex-logo.svg', // the real ReshapeX logo (marketing asset); shipped by vite.screensaver.config.ts
     palette,
     catalogNames,
     docNames,
