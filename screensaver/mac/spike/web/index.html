@@ -1,0 +1,20 @@
+<!doctype html><meta charset=utf-8><body style="margin:0;background:#0D1117;color:#8B9AAD;font:20px system-ui">
+<canvas id=c style="width:100vw;height:100vh;display:block"></canvas>
+<pre id=t style="position:fixed;top:12px;left:12px"></pre>
+<script type=module>
+const t=document.getElementById('t'), c=document.getElementById('c');
+const gl=c.getContext('webgl2');
+const v=await Promise.resolve('tla-ok');
+t.textContent=`webgl2=${!!gl} module+tla=${v} url=${location.href} dpr=${devicePixelRatio} ${innerWidth}x${innerHeight}`;
+if(!gl) throw new Error('no webgl2');
+c.width=innerWidth*devicePixelRatio;c.height=innerHeight*devicePixelRatio;gl.viewport(0,0,c.width,c.height);
+const p=gl.createProgram();
+for(const [ty,src] of [[gl.VERTEX_SHADER,`#version 300 es
+uniform float a;in vec2 p;void main(){float s=sin(a),k=cos(a);gl_Position=vec4(k*p.x-s*p.y,s*p.x+k*p.y,0,1);}`],[gl.FRAGMENT_SHADER,`#version 300 es
+precision mediump float;out vec4 o;void main(){o=vec4(0.0,0.85,1.0,1.0);}`]]){const s=gl.createShader(ty);gl.shaderSource(s,src);gl.compileShader(s);gl.attachShader(p,s);}
+gl.linkProgram(p);gl.useProgram(p);
+const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,.6,-.5,-.4,.5,-.4]),gl.STATIC_DRAW);
+const l=gl.getAttribLocation(p,'p');gl.enableVertexAttribArray(l);gl.vertexAttribPointer(l,2,gl.FLOAT,false,0,0);
+const u=gl.getUniformLocation(p,'a');
+window.__frames=0;(function f(ts){window.__frames++;gl.clearColor(.05,.07,.09,1);gl.clear(gl.COLOR_BUFFER_BIT);gl.uniform1f(u,ts/1000);gl.drawArrays(gl.TRIANGLES,0,3);requestAnimationFrame(f)})(0);
+</script>

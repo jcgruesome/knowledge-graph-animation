@@ -1,0 +1,27 @@
+name: screensaver-win
+on:
+  pull_request:
+    paths: ['screensaver/win/**', 'src/**', 'screensaver/**', '.github/workflows/screensaver-win.yml', 'package.json', 'pnpm-lock.yaml']
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 12.8.1 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: pnpm }
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: 8.0.x }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:screensaver
+      - run: Compress-Archive -Path dist-screensaver/web/* -DestinationPath dist-screensaver/web.zip
+        shell: pwsh
+      - run: dotnet publish screensaver/win/ReshapeXKnowledgeGraph.csproj -c Release -o dist-screensaver/win
+      - run: Move-Item dist-screensaver/win/ReshapeXKnowledgeGraph.exe dist-screensaver/win/ReshapeXKnowledgeGraph.scr
+        shell: pwsh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ReshapeXKnowledgeGraph-scr
+          path: dist-screensaver/win/ReshapeXKnowledgeGraph.scr

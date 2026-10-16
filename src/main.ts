@@ -27,9 +27,8 @@ import {
   BlendFunction,
 } from 'postprocessing';
 import { buildGraph, type Density } from './graph';
-import { getDictionary } from './i18n';
-import { loadBrandKit, type BrandKit } from './brandkit';
-import { DEFAULT_QUERIES } from './queries';
+import { resolveKit, getDictionary, DEFAULT_QUERIES } from '@kg/runtime';
+import type { BrandKit } from './brandkit';
 import { ANSWER, buildSchedule, LAND, LOOP, edgeState, envelope, ignition, nodeActivation } from './schedule';
 import { NodeField } from './nodes';
 import { EdgeField } from './edges';
@@ -39,15 +38,15 @@ import { ClusterFields, createBackdrop, createDust } from './atmosphere';
 import { CameraRig } from './cameraRig';
 import { haloColor, buildPalette, PALETTE, VIOLET_HALO } from './palette';
 import { LoopExporter } from './export';
+import { pixelRatioFor } from './pixelRatio';
 import { unfurl } from './motion';
 import { SoundDesign } from './audio';
 import { VolumetricHazeEffect } from './volumetrics';
 import { OVERLAY_LAYER, TRAIL_LAYER, TrailAccumulator } from './trails';
 
-// A BrandKit (loaded via ?kit=<slug>) overrides locale, palette, queries, logo, and seed.
-// With no ?kit= param, the built-in ReshapeX defaults stand.
-const kitSlug = new URLSearchParams(location.search).get('kit');
-const kit: BrandKit | null = kitSlug ? await loadBrandKit(kitSlug) : null;
+// A BrandKit (resolved by @kg/runtime: ?kit=<slug> on the web, a synthetic kit in the screensaver)
+// overrides locale, palette, queries, logo, and seed. With no kit, the built-in ReshapeX defaults stand.
+const kit: BrandKit | null = await resolveKit();
 const dict = getDictionary(kit?.locale ?? 'en');
 buildPalette(kit?.palette);
 syncDefaultTint(); // DEFAULT_TINT is captured at signals.ts import time; re-derive it post-override.
@@ -64,7 +63,10 @@ const canvas = document.getElementById('scene');
 if (!(canvas instanceof HTMLCanvasElement)) throw new Error('#scene canvas missing');
 
 const renderer = new WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+// ?maxpx=<n> caps the canvas pixel count (the screensaver host sets it: a multi-display view can be 7680x2160).
+const maxPixels = Number(new URLSearchParams(location.search).get('maxpx') ?? Infinity);
+const applyPixelRatio = (): void => renderer.setPixelRatio(pixelRatioFor(window.devicePixelRatio, window.innerWidth, window.innerHeight, maxPixels));
+applyPixelRatio();
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(PALETTE.deepSpace, 1);
 
@@ -1110,6 +1112,7 @@ window.addEventListener('keyup', (ev) => {
 });
 
 window.addEventListener('resize', () => {
+  applyPixelRatio();
   renderer.setSize(window.innerWidth, window.innerHeight);
   composer.setSize(window.innerWidth, window.innerHeight);
   camera.aspect = window.innerWidth / window.innerHeight;

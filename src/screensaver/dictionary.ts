@@ -1,0 +1,57 @@
+import type { Dictionary } from '../i18n/types';
+import { CATALOG_FAMILIES, DOC_FAMILIES, VOICE } from './banks';
+
+/** English copy with no case-study wording. Mirrors the shape of src/i18n/en.ts without importing it. */
+export const syntheticDictionary: Dictionary = {
+  locale: 'en',
+  beats: {
+    dormant: 'Dormant field',
+    customerQuery: 'Customer query',
+    grounding: 'Grounding',
+    catalogResolves: 'Catalog resolves',
+    crossValidation: 'Cross-validation',
+    configSpace: 'Configuration space',
+    streamsConverge: 'Streams converge',
+    answerValidated: 'Answer validated',
+    recede: 'Recede',
+  },
+  voice: VOICE,
+  hud: {
+    title: 'Signal becomes intelligence',
+    searchPlaceholder: 'Ask a question',
+    searchAriaLabel: 'Ask a question',
+    sendAriaLabel: 'Send query',
+    caption: 'Press enter to route the query',
+    captionSending: 'Routing…',
+    soundHint: '',
+    soundHintOn: '',
+    soundHintMuted: '',
+    controlsHint: '',
+    verified: '✓ Validated against official reference',
+    consultaLabel: 'Query',
+    respuestaLabel: 'Answer',
+    fallbackAnswer: 'Route validated.',
+  },
+  events: {
+    familyFound: 'Finds the "{name}" family: {count} possible references',
+    sweepFamilies: 'Checks the other {count} product families in case they apply',
+    customerAsks: 'The customer asks: "{QUERY}"',
+    queryLanded: 'The question reaches the full catalog',
+    crossReference: 'Cross-references the answer with the compatibility matrix',
+    verifyOfficialDocs: 'Verifies the data against official technical documentation',
+    searchRelatedParts: 'Searches for related parts and configurations',
+    exploreConfigurations: 'Explores thousands of possible configurations',
+    uncertainToHuman: '{count} uncertain cases are sent to a human engineer',
+    gatherFindings: 'Gathers everything found in each product family',
+    combineIntoAnswer: 'Combines everything into a single answer',
+    deliverAnswer: 'Delivers a validated answer to the customer',
+  },
+  labels: {
+    catalogRoot: 'Catalog · {count} part numbers',
+    docsRoot: 'Compatibility matrices · {count} relations',
+    configRoot: 'Configurations · {count} indexed',
+    hub: '{name} · {count} modules',
+  },
+  catalogNames: CATALOG_FAMILIES.slice(0, 8),
+  docNames: DOC_FAMILIES.slice(0, 3),
+};

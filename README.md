@@ -97,6 +97,27 @@ pipeline on purpose: it's a real production deploy under a real team account.
   clean up an accidental one with `printf 'y\n' | vercel project rm <name> --scope reshapex` (the
   prompt wants a literal `y`, not the project name).
 
+## Screensaver (macOS and Windows)
+
+Installable screensavers that run the same animation with a fully synthetic graph, palette, SKUs
+and queries, re-rolled every 60 s. No real customer data ships in them (`pnpm verify:screensaver`
+greps the build for the real names and part numbers in `src/screensaver/denylist.ts`). Builds are
+**unsigned**: for internal testing only, signing comes before any public download.
+
+- **macOS (arm64):** `pnpm package:mac`, then
+  `cp -R dist-screensaver/ReshapeXKnowledgeGraph.saver ~/Library/Screen\ Savers/ && killall legacyScreenSaver`
+  and pick it in System Settings > Screen Saver. Needs Command Line Tools only (no Xcode). The host
+  is a `ScreenSaverView` with a `WKWebView`; it uses one private WebKit call
+  (`_setWindowOcclusionDetectionEnabled:`) because `legacyScreenSaver` otherwise reports the page
+  hidden and animation stops. Notes: `docs/superpowers/specs/2026-10-16-screensaver-spike-notes.md`.
+- **Windows:** built by CI (`.github/workflows/screensaver-win.yml`, artifact
+  `ReshapeXKnowledgeGraph-scr`): a .NET WebView2 host. Right-click the `.scr` > Install. Needs the
+  WebView2 runtime (preinstalled on current Windows 10/11). **Not yet tested on a Windows machine.**
+  Check: installs, preview pane animates, one window per monitor, exits on key/click/mouse move,
+  re-rolls after 60 s.
+- **Uninstall:** delete the `.saver` from `~/Library/Screen Savers`, or the `.scr` from `C:\Windows\System32`.
+- **Web:** `pnpm build:screensaver` builds the bundle (needs `?seed=<uint32>`); the normal web app is unchanged.
+
 ## Density
 
 `?density=1` (default, ~2k nodes, most legible) · `?density=2` (~8k) · `?density=3` (~20k nodes, ~37k
