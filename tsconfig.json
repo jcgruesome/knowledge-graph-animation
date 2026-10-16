@@ -9,7 +9,8 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "lib": ["ES2022", "DOM"],
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "paths": { "@kg/runtime": ["./src/runtime.ts"] }
   },
   "include": ["src"]
 }

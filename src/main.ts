@@ -27,9 +27,8 @@ import {
   BlendFunction,
 } from 'postprocessing';
 import { buildGraph, type Density } from './graph';
-import { getDictionary } from './i18n';
-import { loadBrandKit, type BrandKit } from './brandkit';
-import { DEFAULT_QUERIES } from './queries';
+import { resolveKit, getDictionary, DEFAULT_QUERIES } from '@kg/runtime';
+import type { BrandKit } from './brandkit';
 import { ANSWER, buildSchedule, LAND, LOOP, edgeState, envelope, ignition, nodeActivation } from './schedule';
 import { NodeField } from './nodes';
 import { EdgeField } from './edges';
@@ -44,10 +43,9 @@ import { SoundDesign } from './audio';
 import { VolumetricHazeEffect } from './volumetrics';
 import { OVERLAY_LAYER, TRAIL_LAYER, TrailAccumulator } from './trails';
 
-// A BrandKit (loaded via ?kit=<slug>) overrides locale, palette, queries, logo, and seed.
-// With no ?kit= param, the built-in ReshapeX defaults stand.
-const kitSlug = new URLSearchParams(location.search).get('kit');
-const kit: BrandKit | null = kitSlug ? await loadBrandKit(kitSlug) : null;
+// A BrandKit (resolved by @kg/runtime: ?kit=<slug> on the web, a synthetic kit in the screensaver)
+// overrides locale, palette, queries, logo, and seed. With no kit, the built-in ReshapeX defaults stand.
+const kit: BrandKit | null = await resolveKit();
 const dict = getDictionary(kit?.locale ?? 'en');
 buildPalette(kit?.palette);
 syncDefaultTint(); // DEFAULT_TINT is captured at signals.ts import time; re-derive it post-override.
@@ -56,7 +54,10 @@ const SEED = kit?.seed ?? 20260828;
 
 if (kit) {
   const logoEl = document.querySelector<HTMLImageElement>('.logo');
-  if (logoEl) logoEl.src = kit.logoPath;
+  if (logoEl) {
+    if (kit.logoPath === '') logoEl.style.display = 'none';
+    else logoEl.src = kit.logoPath;
+  }
 }
 
 // ---------------------------------------------------------------- scene

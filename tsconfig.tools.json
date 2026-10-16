@@ -5,5 +5,5 @@
     "types": ["node"],
     "moduleResolution": "bundler"
   },
-  "include": ["tools/generate-demo"]
+  "include": ["tools/generate-demo", "tools/screensaver", "vite.config.ts", "vite.screensaver.config.ts"]
 }

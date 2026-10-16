@@ -8,3 +8,4 @@ public/kits/*.json
 dist-demos
 .env*
 .kits-held
+dist-screensaver
