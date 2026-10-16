@@ -7,6 +7,8 @@ private let log = Logger(subsystem: "com.reshapex.knowledge-graph", category: "s
 /// Mirrors 3 * LOOP in src/schedule.ts (LOOP = 20 s). Each re-roll loads a new random seed.
 private let rerollSeconds: TimeInterval = 60
 private let fadeSeconds: TimeInterval = 0.6
+/// Canvas pixel budget (about 2x 1080p). A view spanning several displays can be 7680x2160 points.
+private let maxPixels = 4_000_000
 
 /// Serves the bundled web build over rx://app/ (module scripts do not load from file://).
 private final class BundleHandler: NSObject, WKURLSchemeHandler {
@@ -98,8 +100,7 @@ final class KGScreenSaverView: ScreenSaverView, WKNavigationDelegate, WKScriptMe
     private func loadNewSeed() {
         let seed = UInt32.random(in: 0...UInt32.max)
         log.notice("load seed=\(seed, privacy: .public)")
-        lastFrames = 0
-        web?.load(URLRequest(url: URL(string: "rx://app/index.html?seed=\(seed)&density=1")!))
+        web?.load(URLRequest(url: URL(string: "rx://app/index.html?seed=\(seed)&density=1&maxpx=\(maxPixels)")!))
     }
 
     private func reroll() {
@@ -129,6 +130,7 @@ final class KGScreenSaverView: ScreenSaverView, WKNavigationDelegate, WKScriptMe
         addSubview(label)
     }
 
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) { lastFrames = 0 }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = fadeSeconds

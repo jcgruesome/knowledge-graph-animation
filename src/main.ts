@@ -38,6 +38,7 @@ import { ClusterFields, createBackdrop, createDust } from './atmosphere';
 import { CameraRig } from './cameraRig';
 import { haloColor, buildPalette, PALETTE, VIOLET_HALO } from './palette';
 import { LoopExporter } from './export';
+import { pixelRatioFor } from './pixelRatio';
 import { unfurl } from './motion';
 import { SoundDesign } from './audio';
 import { VolumetricHazeEffect } from './volumetrics';
@@ -65,7 +66,10 @@ const canvas = document.getElementById('scene');
 if (!(canvas instanceof HTMLCanvasElement)) throw new Error('#scene canvas missing');
 
 const renderer = new WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+// ?maxpx=<n> caps the canvas pixel count (the screensaver host sets it: a multi-display view can be 7680x2160).
+const maxPixels = Number(new URLSearchParams(location.search).get('maxpx') ?? Infinity);
+const applyPixelRatio = (): void => renderer.setPixelRatio(pixelRatioFor(window.devicePixelRatio, window.innerWidth, window.innerHeight, maxPixels));
+applyPixelRatio();
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(PALETTE.deepSpace, 1);
 
@@ -1111,6 +1115,7 @@ window.addEventListener('keyup', (ev) => {
 });
 
 window.addEventListener('resize', () => {
+  applyPixelRatio();
   renderer.setSize(window.innerWidth, window.innerHeight);
   composer.setSize(window.innerWidth, window.innerHeight);
   camera.aspect = window.innerWidth / window.innerHeight;
