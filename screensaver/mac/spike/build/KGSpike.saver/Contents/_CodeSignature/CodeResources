@@ -4,51 +4,18 @@
 <dict>
 	<key>files</key>
 	<dict>
-		<key>Resources/web/assets/index-Bg5kEOYn.js</key>
-		<data>
-		h6BwdIsGx1YPuCpKJjCoj0Xktas=
-		</data>
 		<key>Resources/web/index.html</key>
 		<data>
-		LQJJj0RkfmvPdfDWMGGQjzYN3wQ=
-		</data>
-		<key>Resources/web/kits/.gitkeep</key>
-		<data>
-		2jmj7l5rSw0yVb/vlWAYkK/YBwk=
-		</data>
-		<key>Resources/web/reshapex-logo.svg</key>
-		<data>
-		S7pJFSEnD3NXVk7JWNyxX6GHzzo=
+		yiG6PZ24KJS3rwsrk/TWBgc8JwY=
 		</data>
 	</dict>
 	<key>files2</key>
 	<dict>
-		<key>Resources/web/assets/index-Bg5kEOYn.js</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			ncvLaLWRsQ+IC7PEQH3Xqio8Vtd8qMrMqs4xP2Tg4t0=
-			</data>
-		</dict>
 		<key>Resources/web/index.html</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			5b3+MzIXIlS8CNh8ppvImK8XgWryg7NiK61ATKmzgvA=
-			</data>
-		</dict>
-		<key>Resources/web/kits/.gitkeep</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=
-			</data>
-		</dict>
-		<key>Resources/web/reshapex-logo.svg</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			Tlh527/Z6DmizusmKkpo27dDnLF7phyD1hrLYwGVSEQ=
+			eL28g9d4nEJdc9XfICVdLE46aocFmgssMxYM3KXSc3g=
 			</data>
 		</dict>
 	</dict>

@@ -1,5 +1,7 @@
 import ScreenSaver
 import WebKit
+import os
+let log = Logger(subsystem: "com.reshapex.kgspike", category: "view")
 
 final class FolderHandler: NSObject, WKURLSchemeHandler {
     let root: URL
@@ -34,6 +36,13 @@ final class SpikeView: ScreenSaverView {
 
     override init?(frame: NSRect, isPreview: Bool) {
         super.init(frame: frame, isPreview: isPreview)
+        log.notice("init preview=\(isPreview) frame=\(NSStringFromRect(frame), privacy: .public)")
+        makeWeb()
+    }
+    private var ticker: Timer?
+    let id = Int.random(in: 100...999)
+    private func makeWeb() {
+        guard web == nil else { return }
         let bundle = Bundle(for: SpikeView.self)
         let root = bundle.resourceURL!.appendingPathComponent("web")
         let cfg = WKWebViewConfiguration()
@@ -41,13 +50,27 @@ final class SpikeView: ScreenSaverView {
         let w = WKWebView(frame: bounds, configuration: cfg)
         w.autoresizingMask = [.width, .height]
         w.setValue(false, forKey: "drawsBackground")
+        // legacyScreenSaver windows are reported occluded, so WebKit hides the page and stops rAF.
+        let sel = NSSelectorFromString("_setWindowOcclusionDetectionEnabled:")
+        if w.responds(to: sel), let imp = w.method(for: sel) {
+            typealias SetBool = @convention(c) (AnyObject, Selector, Bool) -> Void
+            unsafeBitCast(imp, to: SetBool.self)(w, sel, false); log.notice("occlusion detection disabled")
+        }
+        else { log.error("WKWebView lacks _setWindowOcclusionDetectionEnabled:") }
         addSubview(w)
         web = w
         w.load(URLRequest(url: URL(string: "rx://app/index.html?seed=1&preview=\(isPreview ? 1 : 0)")!))
+        ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            self?.web?.evaluateJavaScript("window.__frames + ' vis=' + document.visibilityState") { r, e in
+                log.notice("tick \(self?.id ?? 0, privacy: .public) frames=\(String(describing: r), privacy: .public) err=\(String(describing: e), privacy: .public) win=\(self?.window != nil, privacy: .public) vis=\(self?.window?.isVisible ?? false, privacy: .public) size=\(NSStringFromSize(self?.bounds.size ?? .zero), privacy: .public)")
+            }
+        }
     }
     required init?(coder: NSCoder) { fatalError() }
-    override func startAnimation() { super.startAnimation() }
+    override func startAnimation() { log.notice("startAnimation"); makeWeb(); super.startAnimation() }
     override func stopAnimation() {
+        log.notice("stopAnimation")
+        ticker?.invalidate(); ticker = nil
         web?.removeFromSuperview(); web = nil
         super.stopAnimation()
     }

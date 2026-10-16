@@ -16,5 +16,5 @@ gl.linkProgram(p);gl.useProgram(p);
 const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,.6,-.5,-.4,.5,-.4]),gl.STATIC_DRAW);
 const l=gl.getAttribLocation(p,'p');gl.enableVertexAttribArray(l);gl.vertexAttribPointer(l,2,gl.FLOAT,false,0,0);
 const u=gl.getUniformLocation(p,'a');
-(function f(ts){gl.clearColor(.05,.07,.09,1);gl.clear(gl.COLOR_BUFFER_BIT);gl.uniform1f(u,ts/1000);gl.drawArrays(gl.TRIANGLES,0,3);requestAnimationFrame(f)})(0);
+window.__frames=0;(function f(ts){window.__frames++;gl.clearColor(.05,.07,.09,1);gl.clear(gl.COLOR_BUFFER_BIT);gl.uniform1f(u,ts/1000);gl.drawArrays(gl.TRIANGLES,0,3);requestAnimationFrame(f)})(0);
 </script>
