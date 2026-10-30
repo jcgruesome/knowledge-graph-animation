@@ -396,7 +396,8 @@ const logEl = el('log');
 {
   document.documentElement.lang = dict.locale;
   document.title = `ReshapeX · ${dict.hud.title}`;
-  const searchInput = el('search-input') as HTMLInputElement;
+  const searchInput = el('search-input');
+  if (!(searchInput instanceof HTMLInputElement)) throw new Error('#search-input is not an <input>');
   searchInput.placeholder = dict.hud.searchPlaceholder;
   searchInput.setAttribute('aria-label', dict.hud.searchAriaLabel);
   el('search-send').setAttribute('aria-label', dict.hud.sendAriaLabel);
