@@ -7,7 +7,7 @@ import { deriveGraphPalette } from '../../src/generator/palette-algorithm';
 import { parseBrandKit, type BrandKit } from '../../src/brandkit';
 import { companyToSlug, companyToSeed } from './slug';
 import { renderKit } from './render';
-import { deployPreview } from './deploy';
+import { deployPreview, previewLink } from './deploy';
 
 const program = new Command();
 program
@@ -108,7 +108,7 @@ async function main(): Promise<void> {
 
   console.log('[8/8] Deploying preview...');
   const previewUrl = await deployPreview(slug);
-  console.log(`\nPreview: ${previewUrl}`);
+  console.log(`\nPreview: ${previewLink(previewUrl, slug, density)}`);
   console.log(`MP4: ${outPath}`);
   console.log(`To promote to a stable URL: pnpm promote-demo ${slug} --project <name>`);
 }

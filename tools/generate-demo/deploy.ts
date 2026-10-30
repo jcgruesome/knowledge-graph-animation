@@ -17,10 +17,24 @@ const HELD_DIR = '.kits-held';
  * cannot express "everything here except <slug>", so the other kits are moved out of the
  * upload root for the duration of the deploy and moved back in a `finally`.
  */
+/**
+ * Entries of `public/kits/` that must not ship with `slug`'s preview: other kits' `.json` files
+ * and per-slug directories. Only the tracked `.gitkeep` stays put: any other dotfile (a stray
+ * `.env`, an editor backup) is held back too, so it never rides along in a preview upload.
+ */
+export function selectHeldBack(entries: string[], slug: string): string[] {
+  const keep = new Set(['.gitkeep', `${slug}.json`, slug]);
+  return entries.filter((entry) => !keep.has(entry));
+}
+
+/** The page URL a prospect opens: `?density=` must match the rendered MP4 or the graph sizes differ. */
+export function previewLink(baseUrl: string, slug: string, density: 1 | 2 | 3): string {
+  return `${baseUrl}/?kit=${encodeURIComponent(slug)}${density === 1 ? '' : `&density=${density}`}`;
+}
+
 function hideOtherKits(slug: string): string[] {
   if (!existsSync(KITS_DIR)) return [];
-  const keep = new Set([`${slug}.json`, slug]);
-  const others = readdirSync(KITS_DIR).filter((entry) => !keep.has(entry));
+  const others = selectHeldBack(readdirSync(KITS_DIR), slug);
   if (others.length === 0) return [];
   if (existsSync(HELD_DIR) && readdirSync(HELD_DIR).length > 0) {
     throw new Error(

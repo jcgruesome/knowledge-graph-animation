@@ -5,6 +5,7 @@ dist
 exports
 .vercel
 public/kits/*.json
+public/kits/*/
 dist-demos
 .env*
 .kits-held
