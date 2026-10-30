@@ -1,4 +1,5 @@
 import type { GraphPalette } from './generator/palette-algorithm';
+import { getDictionary } from './i18n';
 import type { Dictionary } from './i18n/types';
 
 export interface SupportQuery {
@@ -20,6 +21,12 @@ export interface BrandKit {
    * `catalogNames` so the two clusters never display the same labels.
    */
   docNames?: string[];
+  /**
+   * Optional overrides for the in-scene root labels (`catalogRoot`, `docsRoot`, `configRoot`, `hub`).
+   * Each value must keep the placeholders of the dictionary default it replaces. Omitted keys, and
+   * kits without this field, render the dictionary's ReshapeX defaults.
+   */
+  labels?: Partial<Dictionary['labels']>;
   queries: SupportQuery[];
   seed: number;
   generatedAt: string;
@@ -40,7 +47,31 @@ export function parseBrandKit(value: unknown): BrandKit {
   for (const key of ['brand', 'clusterA', 'clusterB', 'stakes', 'answer', 'background', 'steel', 'usedFallback']) {
     if (!(key in palette)) throw new Error(`BrandKit: palette missing "${key}"`);
   }
+  if (v.labels !== undefined) parseLabels(v.labels, v.locale);
   return v as unknown as BrandKit;
+}
+
+function parseLabels(value: unknown, locale: Dictionary['locale']): void {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new Error('BrandKit: labels must be an object');
+  const defaults: Record<string, string> = getDictionary(locale).labels;
+  for (const [key, text] of Object.entries(value)) {
+    const base = defaults[key];
+    if (base === undefined) throw new Error(`BrandKit: unknown label "${key}"`);
+    if (typeof text !== 'string' || !text.trim()) throw new Error(`BrandKit: label "${key}" must be a non-empty string`);
+    for (const placeholder of base.match(/\{\w+\}/g) ?? []) {
+      if (!text.includes(placeholder)) throw new Error(`BrandKit: label "${key}" must contain ${placeholder}`);
+    }
+  }
+}
+
+/** The dictionary a kit renders with: its cluster names and root labels over the built-in defaults. */
+export function applyKitOverrides(dict: Dictionary, kit: BrandKit | null): Dictionary {
+  return {
+    ...dict,
+    ...(kit?.catalogNames?.length ? { catalogNames: kit.catalogNames } : {}),
+    ...(kit?.docNames?.length ? { docNames: kit.docNames } : {}),
+    labels: { ...dict.labels, ...kit?.labels },
+  };
 }
 
 /** Fetches and validates `/kits/<slug>.json`. Throws (does not silently fall back) on any failure. */
