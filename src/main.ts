@@ -28,7 +28,7 @@ import {
 } from 'postprocessing';
 import { buildGraph, type Density } from './graph';
 import { resolveKit, getDictionary, DEFAULT_QUERIES } from '@kg/runtime';
-import type { BrandKit } from './brandkit';
+import { applyKitOverrides, type BrandKit } from './brandkit';
 import { ANSWER, buildSchedule, LAND, LOOP, edgeState, envelope, ignition, nodeActivation } from './schedule';
 import { NodeField } from './nodes';
 import { EdgeField } from './edges';
@@ -81,11 +81,7 @@ const density: Density = densityParam === 2 ? 2 : densityParam === 3 ? 3 : 1;
 const graph = buildGraph(SEED, density);
 // A kit overrides the cluster hub names it actually supplies; anything it omits (or supplies
 // empty) falls back to the dictionary's built-in ReshapeX defaults.
-const effectiveDict = {
-  ...dict,
-  ...(kit?.catalogNames?.length ? { catalogNames: kit.catalogNames } : {}),
-  ...(kit?.docNames?.length ? { docNames: kit.docNames } : {}),
-};
+const effectiveDict = applyKitOverrides(dict, kit);
 const schedule = buildSchedule(graph, SEED, effectiveDict);
 
 // Flowers unfurl: leaves start as a bud inside their hub and spring out as the hub wakes.
