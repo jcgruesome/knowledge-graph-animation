@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, renameSync, rmdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { companyToSlug } from './slug';
 
 const KITS_DIR = 'public/kits';
 /**
@@ -47,10 +48,30 @@ function restoreKits(moved: string[]): void {
 }
 
 /**
+ * Without a `.vercel` link, `vercel --yes` infers the project name from the directory, creates
+ * it, and (first deployment) auto-promotes it to a public production alias. So every deploy
+ * first creates (or reuses) and links a deliberately-named `<slug>-demo` project, mirroring
+ * promote.ts.
+ */
+function linkDemoProject(slug: string): void {
+  const project = `${companyToSlug(slug)}-demo`;
+  try {
+    execFileSync('vercel', ['project', 'add', project, '--scope', 'reshapex'], { encoding: 'utf8', stdio: ['inherit', 'pipe', 'pipe'] });
+  } catch (err) {
+    const e = err as { stdout?: string; stderr?: string };
+    const output = `${e.stdout ?? ''}${e.stderr ?? ''}`;
+    // Ignore only the known-safe re-run case; auth, network or invalid-name failures must stop the deploy.
+    if (!/already exists/i.test(output)) throw new Error(`deployPreview: vercel project add ${project} failed:\n${output}`);
+  }
+  execFileSync('vercel', ['link', '--yes', '--project', project, '--scope', 'reshapex'], { stdio: 'inherit' });
+}
+
+/**
  * Deploys a PREVIEW (never --prod) so nothing is aliased without an explicit promote step.
  * Only `slug`'s kit is present in the upload; see `hideOtherKits`.
  */
 export async function deployPreview(slug: string): Promise<string> {
+  linkDemoProject(slug);
   const moved = hideOtherKits(slug);
   let output: string;
   try {
