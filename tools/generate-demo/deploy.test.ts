@@ -5,6 +5,10 @@ describe('selectHeldBack', () => {
   it('ignores dotfiles and the current slug, holds other kits and dirs', () => {
     expect(selectHeldBack(['.gitkeep', 'acme.json', 'acme', 'other.json', 'other'], 'acme')).toEqual(['other.json', 'other']);
   });
+  it('holds back dotfiles other than .gitkeep', () => {
+    expect(selectHeldBack(['.gitkeep', '.env', '.DS_Store', 'acme.json'], 'acme')).toEqual(['.env', '.DS_Store']);
+  });
+
   it('holds nothing when only .gitkeep and the current kit exist', () => {
     expect(selectHeldBack(['.gitkeep', 'acme.json'], 'acme')).toEqual([]);
   });

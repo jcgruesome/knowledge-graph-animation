@@ -19,11 +19,12 @@ const HELD_DIR = '.kits-held';
  */
 /**
  * Entries of `public/kits/` that must not ship with `slug`'s preview: other kits' `.json` files
- * and per-slug directories. Dotfiles (the tracked `.gitkeep`) are never kits and stay put.
+ * and per-slug directories. Only the tracked `.gitkeep` stays put: any other dotfile (a stray
+ * `.env`, an editor backup) is held back too, so it never rides along in a preview upload.
  */
 export function selectHeldBack(entries: string[], slug: string): string[] {
-  const keep = new Set([`${slug}.json`, slug]);
-  return entries.filter((entry) => !entry.startsWith('.') && !keep.has(entry));
+  const keep = new Set(['.gitkeep', `${slug}.json`, slug]);
+  return entries.filter((entry) => !keep.has(entry));
 }
 
 /** The page URL a prospect opens: `?density=` must match the rendered MP4 or the graph sizes differ. */
